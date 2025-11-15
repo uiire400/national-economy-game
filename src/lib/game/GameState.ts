@@ -453,15 +453,20 @@ export class GameState {
       return { success: false, message: "Player not found" };
     }
 
-    // 職場カードを取得（公共または私有）
+    // 職場カードを取得（公共職場、私有建物、または山札）
     const workplace =
-      this.deck.find((c) => c.id === workplaceId) ||
-      player.buildings.find((c) => c.id === workplaceId);
+      this.publicCards.find((c) => c.id === workplaceId) ||
+      player.buildings.find((c) => c.id === workplaceId) ||
+      this.deck.find((c) => c.id === workplaceId);
     if (!workplace) {
+      console.warn(`[GameState] Workplace not found: ${workplaceId}`);
       return { success: false, message: "Workplace not found" };
     }
 
     const effect = workplace.effect;
+    console.log(
+      `[GameState] Executing workplace: ${workplace.name} (${workplaceId}), effect: ${effect}`
+    );
 
     try {
       switch (effect) {

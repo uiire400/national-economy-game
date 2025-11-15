@@ -1247,7 +1247,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                           isMyTurn && myWorkers > 0 ? "pointer" : "default",
                         opacity: totalPlacedWorkers > 0 ? 0.7 : 1,
                       }}
-                      onClick={() => {
+                      onDoubleClick={() => {
                         if (isMyTurn && myWorkers > 0) {
                           handlePlaceWorker(card.id);
                         }
@@ -1402,7 +1402,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                             isMyTurn && myWorkers > 0 ? "pointer" : "default",
                           opacity: myPlacedWorkerCount > 0 ? 0.7 : 1,
                         }}
-                        onClick={() => {
+                        onDoubleClick={() => {
                           if (isMyTurn && myWorkers > 0) {
                             handlePlaceWorker(card.id);
                           }
