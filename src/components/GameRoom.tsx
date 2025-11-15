@@ -666,7 +666,9 @@ export default function GameRoom({ roomId }: GameRoomProps) {
         case "hand_limit_exceeded": {
           // 手札上限超過時に手札調整モーダルを表示
           setShowHandModal(true);
-          setGuideMessage("🎴 手札が上限を超えています。カードを捨ててください");
+          setGuideMessage(
+            "🎴 手札が上限を超えています。カードを捨ててください"
+          );
           addLog(`🎴 手札調整が必要です`);
           break;
         }
