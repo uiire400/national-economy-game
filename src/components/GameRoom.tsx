@@ -458,6 +458,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
   const [placedWorkers, setPlacedWorkers] = useState<
     Map<string, Map<string, number>>
   >(new Map());
+  const [guideMessage, setGuideMessage] = useState<string>("");
 
   const addLog = (message: string) => {
     setGameLog((prev: string[]) => [...prev, message].slice(-15));
