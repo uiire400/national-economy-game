@@ -367,6 +367,24 @@ const styles = {
     maxWidth: "120px",
   },
 
+  // ガイドメッセージ
+  guideMessageSection: {
+    backgroundColor: "#fff3cd",
+    border: "3px solid #ffc107",
+    padding: "16px",
+    borderRadius: "8px",
+    marginBottom: "12px",
+    boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+    textAlign: "center" as const,
+  },
+
+  guideMessageText: {
+    fontSize: "16px",
+    fontWeight: "bold",
+    color: "#856404",
+    lineHeight: "1.5",
+  },
+
   // ゲームログ
   logSection: {
     backgroundColor: "#fff",
@@ -436,6 +454,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
   const [playerOrder, setPlayerOrder] = useState<
     Array<{ id: string; name: string; order: number; coins: number }>
   >([]);
+  const [guideMessage, setGuideMessage] = useState<string>("");
 
   const addLog = (message: string) => {
     setGameLog((prev) => [...prev, message].slice(-15));
@@ -528,6 +547,13 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           setPlayerOrder(payload.players);
           setShowPlayerOrder(true);
           addLog(`🎲 並び順決定！`);
+
+          // 自分の所持金を更新
+          const myOrderData = payload.players.find((p) => p.id === newPlayerId);
+          if (myOrderData) {
+            setMyCoins(myOrderData.coins);
+          }
+
           // 3秒後に自動で閉じる
           setTimeout(() => {
             setShowPlayerOrder(false);
@@ -539,8 +565,43 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           setGamePhase("ingame");
           setShowPlayerOrder(false);
           addLog(`🎮 ゲーム開始！`);
-          const payload = message.payload as { currentPlayer: Player };
+          const payload = message.payload as {
+            currentPlayer: Player;
+            gameState: {
+              players: Player[];
+              round: number;
+            };
+          };
           setCurrentPlayer(payload.currentPlayer);
+
+          // プレイヤー情報を更新（所持金を含む）
+          if (payload.gameState && payload.gameState.players) {
+            setPlayers(payload.gameState.players);
+
+            // 自分の所持金と建物情報を更新
+            const myPlayerData = payload.gameState.players.find(
+              (p: Player) => p.id === newPlayerId
+            );
+            if (myPlayerData) {
+              setMyCoins(myPlayerData.coins);
+              setMyBuildings(myPlayerData.buildings || []);
+            }
+
+            // ラウンド情報も更新
+            if (payload.gameState.round) {
+              setRound(payload.gameState.round);
+            }
+          }
+
+          // ガイドメッセージを設定
+          if (payload.currentPlayer) {
+            const isMyTurn = payload.currentPlayer.id === newPlayerId;
+            setGuideMessage(
+              isMyTurn
+                ? "👉 あなたのターンです！労働者コマを配置してください"
+                : `⏳ ${payload.currentPlayer.name}さんが労働者コマを配置中...`
+            );
+          }
           break;
         }
 
@@ -583,12 +644,21 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           setCurrentPlayer(payload.currentPlayer);
           setRound(payload.round);
           addLog(`🔄 ターン変更`);
+
+          // ガイドメッセージを更新
+          const isMyTurn = payload.currentPlayer.id === newPlayerId;
+          setGuideMessage(
+            isMyTurn
+              ? "👉 あなたのターンです！労働者コマを配置してください"
+              : `⏳ ${payload.currentPlayer.name}さんが労働者コマを配置中...`
+          );
           break;
         }
 
         case "round_ended": {
           // ラウンド終了時に賃金支払いモーダルを表示
           setShowWageModal(true);
+          setGuideMessage("💸 ラウンド終了！賃金を支払ってください");
           addLog(`💸 賃金支払いフェーズ`);
           break;
         }
@@ -596,6 +666,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
         case "hand_limit_exceeded": {
           // 手札上限超過時に手札調整モーダルを表示
           setShowHandModal(true);
+          setGuideMessage("🎴 手札が上限を超えています。カードを捨ててください");
           addLog(`🎴 手札調整が必要です`);
           break;
         }
@@ -704,6 +775,13 @@ export default function GameRoom({ roomId }: GameRoomProps) {
         })
       );
       setShowWageModal(false);
+      // ガイドメッセージを更新
+      const isMyTurn = currentPlayer?.id === playerId;
+      setGuideMessage(
+        isMyTurn
+          ? "👉 あなたのターンです！労働者コマを配置してください"
+          : `⏳ ${currentPlayer?.name}さんが労働者コマを配置中...`
+      );
     }
   };
 
@@ -743,6 +821,13 @@ export default function GameRoom({ roomId }: GameRoomProps) {
 
   const handleConfirmHandAdjustment = () => {
     setShowHandModal(false);
+    // ガイドメッセージを更新
+    const isMyTurn = currentPlayer?.id === playerId;
+    setGuideMessage(
+      isMyTurn
+        ? "👉 あなたのターンです！労働者コマを配置してください"
+        : `⏳ ${currentPlayer?.name}さんが労働者コマを配置中...`
+    );
   };
 
   const isMyTurn = currentPlayer?.id === playerId;
@@ -1021,6 +1106,13 @@ export default function GameRoom({ roomId }: GameRoomProps) {
       {/* ゲーム画面（従来のUI） */}
       {gamePhase === "ingame" && (
         <>
+          {/* ガイドメッセージ */}
+          {guideMessage && (
+            <div style={styles.guideMessageSection}>
+              <div style={styles.guideMessageText}>{guideMessage}</div>
+            </div>
+          )}
+
           {/* ステータスバー（1行目） */}
           <div style={styles.statusBar}>
             <div style={{ ...styles.statusBox, ...styles.statusBoxRound }}>

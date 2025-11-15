@@ -216,6 +216,18 @@ function handleReady(
 
     // 少し待ってからゲーム開始を通知
     setTimeout(() => {
+      // 各プレイヤーに個別に手札を送信
+      room.players.forEach((player) => {
+        roomManager.sendToPlayer(room.roomId, player.id, {
+          type: "hand_updated",
+          payload: {
+            hand: player.hand,
+          },
+          timestamp: Date.now(),
+        });
+      });
+
+      // 全員にゲーム開始を通知
       roomManager.broadcastToRoom(room.roomId, {
         type: "game_started",
         payload: {
