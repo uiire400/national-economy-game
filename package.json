@@ -1,0 +1,30 @@
+{
+  "name": "national-economy-game",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "dev:ws": "ts-node --project tsconfig.server.json server.ts",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:ws\"",
+    "build": "next build",
+    "start": "next start",
+    "start:ws": "node -r ts-node/register server.ts",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.5",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/ws": "^8.5.10",
+    "concurrently": "^9.2.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

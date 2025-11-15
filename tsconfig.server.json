@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "allowImportingTsExtensions": false,
+    "jsx": "react"
+  },
+  "include": [
+    "server.ts",
+    "src/lib/game/**/*.ts",
+    "src/lib/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".next"]
+}
