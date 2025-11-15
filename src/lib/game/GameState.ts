@@ -273,13 +273,44 @@ export class GameState {
   }
 
   /**
-   * 次のターンへ進む
+   * 次のターンへ進む（労働者がいるプレイヤーまでスキップ）
    */
   nextTurn(): void {
-    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.size;
-    if (this.currentPlayerIndex === 0) {
-      this.round++;
-    }
+    const playersArray = Array.from(this.players.values());
+    const startIndex = this.currentPlayerIndex;
+    let attempts = 0;
+
+    // 次のプレイヤーを探す（最大プレイヤー数だけ試行）
+    do {
+      this.currentPlayerIndex =
+        (this.currentPlayerIndex + 1) % this.players.size;
+      attempts++;
+
+      // 全プレイヤーを確認して、誰も労働者を持っていない場合はラウンド終了
+      if (attempts >= this.players.size) {
+        const hasAnyWorkers = playersArray.some((p) => p.workers > 0);
+        if (!hasAnyWorkers) {
+          // ラウンド終了の準備（別途 endRound を呼ぶ必要あり）
+          return;
+        }
+        // 念のため最初のプレイヤーに戻す
+        this.currentPlayerIndex = 0;
+        break;
+      }
+
+      const currentPlayer = playersArray[this.currentPlayerIndex];
+      // 労働者がいるプレイヤーが見つかったら終了
+      if (currentPlayer && currentPlayer.workers > 0) {
+        break;
+      }
+    } while (this.currentPlayerIndex !== startIndex);
+  }
+
+  /**
+   * 全プレイヤーの労働者が0かチェック（ラウンド終了判定）
+   */
+  shouldEndRound(): boolean {
+    return Array.from(this.players.values()).every((p) => p.workers === 0);
   }
 
   /**

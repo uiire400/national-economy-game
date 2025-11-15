@@ -428,6 +428,77 @@ function handleAction(
           timestamp: Date.now(),
         });
       }
+
+      // ラウンド終了判定（全員の労働者が0）
+      if (room.shouldEndRound()) {
+        console.log(
+          `[WebSocket] All workers placed, ending round ${room.round}`
+        );
+
+        // ラウンド終了処理
+        const endResult = room.endRound();
+
+        if (endResult.errors.length > 0) {
+          console.warn(`[WebSocket] Round end errors:`, endResult.errors);
+        }
+
+        // ゲーム終了判定
+        if (room.phase === "finished") {
+          const results = room.calculateGameResults();
+
+          roomManager.broadcastToRoom(room.roomId, {
+            type: "game_finished",
+            payload: {
+              results,
+            },
+            timestamp: Date.now(),
+          });
+        } else {
+          // 次のラウンドへ
+          roomManager.broadcastToRoom(room.roomId, {
+            type: "round_ended",
+            payload: {
+              round: room.round,
+              currentRoundCard: room.currentRoundCard,
+              currentPlayer: room.getCurrentPlayer(),
+            },
+            timestamp: Date.now(),
+          });
+
+          // 全プレイヤーの状態を更新
+          room.players.forEach((p) => {
+            roomManager.sendToPlayer(room.roomId, p.id, {
+              type: "hand_updated",
+              payload: {
+                hand: p.hand,
+              },
+              timestamp: Date.now(),
+            });
+
+            roomManager.broadcastToRoom(room.roomId, {
+              type: "resource_updated",
+              payload: {
+                playerId: p.id,
+                coins: p.coins,
+              },
+              timestamp: Date.now(),
+            });
+          });
+        }
+      } else {
+        // 次のターンへ（労働者がいるプレイヤーまで自動スキップ）
+        room.nextTurn();
+
+        roomManager.broadcastToRoom(room.roomId, {
+          type: "turn_changed",
+          payload: {
+            currentPlayer: room.getCurrentPlayer(),
+            round: room.round,
+            gameState: room.toJSON(),
+          },
+          timestamp: Date.now(),
+        });
+      }
       break;
     }
 
