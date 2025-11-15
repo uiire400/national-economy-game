@@ -346,6 +346,91 @@ function handleAction(
       break;
     }
 
+    case "place_worker": {
+      const workplaceId = (data as { workplaceId?: string }).workplaceId;
+      if (!workplaceId) break;
+
+      const player = room.players.get(playerId);
+      if (!player) break;
+
+      // 労働者を配置
+      const placed = room.placeWorker(playerId, workplaceId);
+      if (!placed) {
+        console.warn(
+          `[WebSocket] Failed to place worker: ${playerId} -> ${workplaceId}`
+        );
+        break;
+      }
+
+      // 配置後の状態を取得
+      const placedWorkersObj: Record<string, Record<string, number>> = {};
+      room.placedWorkers.forEach((workplaceMap, pid) => {
+        const workplaces: Record<string, number> = {};
+        workplaceMap.forEach((count, wid) => {
+          workplaces[wid] = count;
+        });
+        placedWorkersObj[pid] = workplaces;
+      });
+
+      // 配置を全員に通知
+      roomManager.broadcastToRoom(room.roomId, {
+        type: "worker_placed",
+        payload: {
+          playerId,
+          workplaceId,
+          placedWorkers: placedWorkersObj,
+          remainingWorkers: player.workers,
+        },
+        timestamp: Date.now(),
+      });
+
+      // カード効果を実行
+      const result = room.executeWorkplaceFunction(playerId, workplaceId, []);
+
+      if (result.success) {
+        // 効果適用を通知
+        roomManager.broadcastToRoom(room.roomId, {
+          type: "workplace_effect_applied",
+          payload: {
+            playerId,
+            workplaceId,
+            message: result.message,
+          },
+          timestamp: Date.now(),
+        });
+
+        // プレイヤーに個別に手札を通知
+        roomManager.sendToPlayer(room.roomId, playerId, {
+          type: "hand_updated",
+          payload: {
+            hand: player.hand,
+          },
+          timestamp: Date.now(),
+        });
+
+        // 建築済みカードを更新
+        roomManager.sendToPlayer(room.roomId, playerId, {
+          type: "buildings_updated",
+          payload: {
+            playerId,
+            buildings: player.buildings,
+          },
+          timestamp: Date.now(),
+        });
+
+        // 所持金を更新
+        roomManager.broadcastToRoom(room.roomId, {
+          type: "resource_updated",
+          payload: {
+            playerId,
+            coins: player.coins,
+          },
+          timestamp: Date.now(),
+        });
+      }
+      break;
+    }
+
     default:
       console.warn(`[WebSocket] Unknown action type: ${actionType}`);
   }

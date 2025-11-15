@@ -429,7 +429,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
   const [round, setRound] = useState<number>(1);
   const [wagePerWorker] = useState<number>(2);
   const [myCoins, setMyCoins] = useState<number>(5);
-  const [myWorkers] = useState<number>(2);
+  const [myWorkers, setMyWorkers] = useState<number>(2);
   const [maxWorkers] = useState<number>(5);
   const [unpaidDebt] = useState<number>(0);
   const [victoryTokens] = useState<number>(0);
@@ -455,9 +455,12 @@ export default function GameRoom({ roomId }: GameRoomProps) {
     Array<{ id: string; name: string; order: number; coins: number }>
   >([]);
   const [guideMessage, setGuideMessage] = useState<string>("");
+  const [placedWorkers, setPlacedWorkers] = useState<
+    Map<string, Map<string, number>>
+  >(new Map());
 
   const addLog = (message: string) => {
-    setGameLog((prev) => [...prev, message].slice(-15));
+    setGameLog((prev: string[]) => [...prev, message].slice(-15));
   };
 
   useEffect(() => {
@@ -694,6 +697,44 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           break;
         }
 
+        case "worker_placed": {
+          const payload = message.payload as {
+            workplaceId: string;
+            playerId: string;
+            placedWorkers: Record<string, Record<string, number>>;
+            remainingWorkers: number;
+          };
+          // 配置情報を更新
+          const newPlacedWorkers = new Map<string, Map<string, number>>();
+          Object.entries(payload.placedWorkers).forEach(([pid, workplaces]) => {
+            const workplaceMap = new Map<string, number>();
+            Object.entries(workplaces).forEach(([wid, count]) => {
+              workplaceMap.set(wid, count);
+            });
+            newPlacedWorkers.set(pid, workplaceMap);
+          });
+          setPlacedWorkers(newPlacedWorkers);
+
+          // 自分の労働者数を更新
+          if (payload.playerId === newPlayerId) {
+            setMyWorkers(payload.remainingWorkers);
+          }
+
+          addLog(`👷 労働者配置`);
+          break;
+        }
+
+        case "workplace_effect_applied": {
+          const payload = message.payload as {
+            message: string;
+            playerId: string;
+          };
+          if (payload.playerId === newPlayerId) {
+            addLog(`✨ ${payload.message}`);
+          }
+          break;
+        }
+
         default:
           console.log("Unknown message type:", message.type);
       }
@@ -817,7 +858,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
         })
       );
       // 手札から削除
-      setMyHand((prev) => prev.filter((c) => c.id !== cardId));
+      setMyHand((prev: Card[]) => prev.filter((c: Card) => c.id !== cardId));
     }
   };
 
@@ -832,9 +873,25 @@ export default function GameRoom({ roomId }: GameRoomProps) {
     );
   };
 
+  const handlePlaceWorker = (workplaceId: string) => {
+    if (ws && ws.readyState === 1 && currentPlayer?.id === playerId) {
+      ws.send(
+        JSON.stringify({
+          type: "action",
+          payload: {
+            playerId,
+            actionType: "place_worker",
+            data: { workplaceId },
+          },
+          timestamp: Date.now(),
+        })
+      );
+    }
+  };
+
   const isMyTurn = currentPlayer?.id === playerId;
-  const myPlayer = players.find((p) => p.id === playerId);
-  const allReady = players.length > 0 && players.every((p) => p.ready);
+  const myPlayer = players.find((p: Player) => p.id === playerId);
+  const allReady = players.length > 0 && players.every((p: Player) => p.ready);
   const myReady = myPlayer?.ready || false;
 
   return (
@@ -910,7 +967,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             <div
               style={{ display: "flex", flexDirection: "column", gap: "8px" }}
             >
-              {players.map((p) => (
+              {players.map((p: Player) => (
                 <div
                   key={p.id}
                   style={{
@@ -1040,56 +1097,66 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             <div
               style={{ display: "flex", flexDirection: "column", gap: "15px" }}
             >
-              {playerOrder.map((player, index) => (
-                <div
-                  key={player.id}
-                  style={{
-                    padding: "20px",
-                    backgroundColor: index === 0 ? "#ffd700" : "#f0f0f0",
-                    borderRadius: "12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    border:
-                      player.id === playerId ? "3px solid #3498db" : "none",
-                  }}
-                >
+              {playerOrder.map(
+                (
+                  player: {
+                    id: string;
+                    name: string;
+                    order: number;
+                    coins: number;
+                  },
+                  index: number
+                ) => (
                   <div
+                    key={player.id}
                     style={{
+                      padding: "20px",
+                      backgroundColor: index === 0 ? "#ffd700" : "#f0f0f0",
+                      borderRadius: "12px",
                       display: "flex",
+                      justifyContent: "space-between",
                       alignItems: "center",
-                      gap: "15px",
+                      fontSize: "18px",
+                      fontWeight: "bold",
+                      border:
+                        player.id === playerId ? "3px solid #3498db" : "none",
                     }}
                   >
                     <div
                       style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        backgroundColor: index === 0 ? "#ff6b6b" : "#4ecdc4",
-                        color: "#fff",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "20px",
+                        gap: "15px",
                       }}
                     >
-                      {player.order}
+                      <div
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          backgroundColor: index === 0 ? "#ff6b6b" : "#4ecdc4",
+                          color: "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "20px",
+                        }}
+                      >
+                        {player.order}
+                      </div>
+                      <div>{player.name}</div>
+                      {player.id === playerId && (
+                        <span style={{ color: "#3498db", fontSize: "14px" }}>
+                          (あなた)
+                        </span>
+                      )}
                     </div>
-                    <div>{player.name}</div>
-                    {player.id === playerId && (
-                      <span style={{ color: "#3498db", fontSize: "14px" }}>
-                        (あなた)
-                      </span>
-                    )}
+                    <div style={{ fontSize: "20px", color: "#27ae60" }}>
+                      💰 ${player.coins}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "20px", color: "#27ae60" }}>
-                    💰 ${player.coins}
-                  </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
             <div
               style={{
@@ -1160,18 +1227,82 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             </div>
 
             <div style={styles.publicCardsGrid}>
-              {publicCards.map((card) => (
-                <div
-                  key={card.id}
-                  style={styles.cardSlot}
-                  onClick={() => gamePhase === "ingame" && isMyTurn}
-                >
-                  <CardImage card={card} />
-                  <div style={styles.cardCost}>
-                    {card.icon} {card.name}
+              {publicCards.map((card: Card) => {
+                const myPlacedWorkerCount =
+                  placedWorkers.get(playerId)?.get(card.id) || 0;
+                const totalPlacedWorkers = Array.from(
+                  placedWorkers.values()
+                ).reduce(
+                  (sum: number, workplaceMap: Map<string, number>) =>
+                    sum + (workplaceMap.get(card.id) || 0),
+                  0
+                );
+
+                return (
+                  <div key={card.id} style={{ position: "relative" as const }}>
+                    <div
+                      style={{
+                        ...styles.cardSlot,
+                        cursor:
+                          isMyTurn && myWorkers > 0 ? "pointer" : "default",
+                        opacity: totalPlacedWorkers > 0 ? 0.7 : 1,
+                      }}
+                      onClick={() => {
+                        if (isMyTurn && myWorkers > 0) {
+                          handlePlaceWorker(card.id);
+                        }
+                      }}
+                    >
+                      <CardImage card={card} />
+                      <div style={styles.cardName}>
+                        {card.icon} {card.name}
+                      </div>
+                      {/* 配置労働者カウント */}
+                      {totalPlacedWorkers > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "4px",
+                            left: "4px",
+                            backgroundColor: "#ff6b6b",
+                            color: "#fff",
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "2px solid #fff",
+                          }}
+                        >
+                          👷{totalPlacedWorkers}
+                        </div>
+                      )}
+                      {/* 自分が配置した労働者 */}
+                      {myPlacedWorkerCount > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "4px",
+                            right: "4px",
+                            backgroundColor: "#4ecdc4",
+                            color: "#fff",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            padding: "2px 6px",
+                            borderRadius: "10px",
+                            border: "2px solid #fff",
+                          }}
+                        >
+                          あなた: {myPlacedWorkerCount}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -1179,7 +1310,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           <div style={styles.playerSection}>
             <div style={styles.playerTitle}>👥 プレイヤー</div>
             <div style={styles.playersList}>
-              {players.map((p) => (
+              {players.map((p: Player) => (
                 <div
                   key={p.id}
                   style={{
@@ -1212,7 +1343,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
               </div>
             ) : (
               <div style={styles.handGrid}>
-                {myHand.map((card) => (
+                {myHand.map((card: Card) => (
                   <div
                     key={card.id}
                     style={styles.handCard}
@@ -1255,14 +1386,59 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             <div style={styles.builtCardsTitle}>🏗️ 建築済みカード</div>
             {myBuildings.length > 0 ? (
               <div style={styles.builtCardsGrid}>
-                {myBuildings.map((card) => (
-                  <div key={card.id} style={styles.builtCard}>
-                    <div style={{ fontSize: "14px" }}>✓</div>
-                    <div style={{ fontSize: "9px", marginTop: "2px" }}>
-                      {card.name}
+                {myBuildings.map((card: Card) => {
+                  const myPlacedWorkerCount =
+                    placedWorkers.get(playerId)?.get(card.id) || 0;
+
+                  return (
+                    <div
+                      key={card.id}
+                      style={{ position: "relative" as const }}
+                    >
+                      <div
+                        style={{
+                          ...styles.builtCard,
+                          cursor:
+                            isMyTurn && myWorkers > 0 ? "pointer" : "default",
+                          opacity: myPlacedWorkerCount > 0 ? 0.7 : 1,
+                        }}
+                        onClick={() => {
+                          if (isMyTurn && myWorkers > 0) {
+                            handlePlaceWorker(card.id);
+                          }
+                        }}
+                      >
+                        <div style={{ fontSize: "14px" }}>✓</div>
+                        <div style={{ fontSize: "9px", marginTop: "2px" }}>
+                          {card.name}
+                        </div>
+                        {/* 配置労働者カウント */}
+                        {myPlacedWorkerCount > 0 && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "4px",
+                              right: "4px",
+                              backgroundColor: "#4ecdc4",
+                              color: "#fff",
+                              fontSize: "12px",
+                              fontWeight: "bold",
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "50%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "2px solid #fff",
+                            }}
+                          >
+                            👷{myPlacedWorkerCount}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div
@@ -1282,7 +1458,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                   ログなし
                 </div>
               ) : (
-                gameLog.map((log, i) => (
+                gameLog.map((log: string, i: number) => (
                   <div key={i} style={styles.logEntry}>
                     {log}
                   </div>
