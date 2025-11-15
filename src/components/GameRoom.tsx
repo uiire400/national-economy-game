@@ -1250,7 +1250,11 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                         opacity: totalPlacedWorkers > 0 ? 0.7 : 1,
                       }}
                       onDoubleClick={() => {
-                        if (isMyTurn && myWorkers > 0 && totalPlacedWorkers === 0) {
+                        if (
+                          isMyTurn &&
+                          myWorkers > 0 &&
+                          totalPlacedWorkers === 0
+                        ) {
                           handlePlaceWorker(card.id);
                         }
                       }}
@@ -1401,13 +1405,19 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                         style={{
                           ...styles.builtCard,
                           cursor:
-                            isMyTurn && myWorkers > 0 && myPlacedWorkerCount === 0
+                            isMyTurn &&
+                            myWorkers > 0 &&
+                            myPlacedWorkerCount === 0
                               ? "pointer"
                               : "not-allowed",
                           opacity: myPlacedWorkerCount > 0 ? 0.7 : 1,
                         }}
                         onDoubleClick={() => {
-                          if (isMyTurn && myWorkers > 0 && myPlacedWorkerCount === 0) {
+                          if (
+                            isMyTurn &&
+                            myWorkers > 0 &&
+                            myPlacedWorkerCount === 0
+                          ) {
                             handlePlaceWorker(card.id);
                           }
                         }}
