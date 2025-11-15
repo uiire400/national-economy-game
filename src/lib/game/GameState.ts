@@ -783,15 +783,24 @@ export class GameState {
     const player = this.players.get(playerId);
     if (!player || player.workers <= 0) return false;
 
+    // 既にこのカードに労働者が配置されているかチェック（全プレイヤー）
+    let totalPlacedOnCard = 0;
+    this.placedWorkers.forEach((workplaceMap) => {
+      totalPlacedOnCard += workplaceMap.get(workplaceId) || 0;
+    });
+
+    // 1カードに1コマまで
+    if (totalPlacedOnCard > 0) {
+      console.warn(`[GameState] Worker already placed on ${workplaceId}`);
+      return false;
+    }
+
     if (!this.placedWorkers.has(playerId)) {
       this.placedWorkers.set(playerId, new Map());
     }
 
     const playerPlaced = this.placedWorkers.get(playerId)!;
-    const currentCount = playerPlaced.get(workplaceId) || 0;
-
-    // 複数配置可能な職場（コスト削減効果あり）
-    playerPlaced.set(workplaceId, currentCount + 1);
+    playerPlaced.set(workplaceId, 1); // 常に1個
     player.workers--;
 
     return true;
