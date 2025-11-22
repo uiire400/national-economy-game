@@ -1,588 +1,267 @@
-# ナショナルエコノミー メシア - 実装計画書
+# ナショナルエコノミー・メセナ 実装計画
 
-## 🎯 プロジェクト目標
+## 家計システムの理解
 
-オンライン対戦版「ナショナルエコノミー メシア」を実装する
+### 【家計】と【サプライ】の違い
 
-- 2〜4人対応
-- DB なし、Vercel 無料枠対応
-- WebSocket によるリアルタイム通信
-- メモリ上でゲーム状態を完全管理
+- **サプライ (supply)**: ゲーム外のお金置き場
+  - 建物売却時のみここからお金を取得
+  - ゲーム終了時のスコア計算には影響しない
+- **家計 (household)**: ゲーム内で流通する共有のお金置き場
+  - ラウンド終了時の賃金支払いは家計に支払う
+  - 露店・市場・スーパー・百貨店などの職場効果で家計からお金を獲得
+  - 両替時も家計とサプライの総量は変わらないように管理
 
----
+　　
+**現在の実装状態**: ✅ 実装済み
 
-## 📊 実装フェーズ詳細
-
-### **Phase 1: 基盤整備（完了）** ✅
-
-**目的**  
-WebSocket で複数プレイヤーが接続でき、ルーム管理ができる状態を実現
-
-**実装内容**
-
-- [x] Next.js プロジェクト初期化
-- [x] WebSocket サーバー実装（`server.ts`）
-- [x] ルーム管理システム（`RoomManager.ts`）
-- [x] ルーム作成・参加・退出機能
-- [x] Heart-beat（5秒ごとの ping/pong）
-- [x] プレイヤー接続管理
-- [x] TypeScript 型定義
-
-**成果物**
-
-```
-src/
-├── lib/
-│   ├── game/
-│   │   ├── RoomManager.ts
-│   │   └── GameState.ts（スケルトン）
-│   └── types/
-│       └── index.ts
-├── app/
-│   ├── layout.tsx
-│   └── page.tsx
-server.ts
-package.json
-tsconfig.json
-```
-
-**テスト方法**
-
-```bash
-npm run dev:ws
-# ws://localhost:3001?roomId=TEST01&playerId=p1&playerName=Alice
-# 複数のタブで接続してみる
-```
+- `GameState.household` と `GameState.supply` で管理
+- 各職場効果で `this.household` からの取得を実装済み
 
 ---
 
-### **Phase 2: GameState 基礎（完了）** ✅
+## 必須実装項目　
 
-**目的**  
-ゲーム状態をサーバー側で完全に管理できる基盤を構築
+### 1. 勝利点トークンシステム
 
-**実装内容**
+**状態**: 🔴 未実装
 
-- [x] GameState クラス設計
-  - プレイヤー管理（Map<playerId, Player>）
-  - 山札・手札・捨て札管理
-  - ターン管理（currentPlayerIndex, round）
-  - ゲームフェーズ管理（lobby/ingame/finished）
+**仕様**:
 
-- [x] 初期化処理
-  - ルーム作成時に GameState を生成
-  - ゲーム開始時に初期手札配布
-  - 山札シャッフル
+- プレイヤーごとに勝利点トークン数を管理 (`Player.victoryTokens`)
+- 獲得方法: 菜園・研究所・宮大工の職場効果
+- 得点計算: 3枚ごとに10点、3枚に満たない分は1枚につき1点
+  - 例: 4枚 = 10 + 1 = 11点、6枚 = 20点
 
-- [x] 基本メソッド
-  - `addPlayer()`: プレイヤー追加
-  - `removePlayer()`: プレイヤー削除
-  - `initializeGame()`: ゲーム初期化
-  - `drawCards()`: カード引き
-  - `nextTurn()`: ターン進行
-  - `toJSON()`: 状態シリアライズ
+**実装内容**:
 
-**成果物**
-
-```typescript
-// GameState.ts - 完全な型定義と基本実装
-class GameState {
-  roomId: string;
-  players: Map<string, Player>;
-  deck: Card[];
-  discard: Card[];
-  // ... 20個以上のメソッド
-}
-```
-
-**テスト方法**
-
-```typescript
-// Node.js REPL
-const gameState = new GameState("ROOM01");
-gameState.addPlayer("p1", "Alice");
-gameState.addPlayer("p2", "Bob");
-gameState.initializeGame();
-console.log(gameState.toJSON());
-```
+- `Player` 型に `victoryTokens: number` を追加 ✅ 済み
+- CardDefs に菜園・研究所・宮大工を追加し、effect を設定
+- GameState に `gain_victory_token` 効果を実装
+- ゲーム終了時スコア計算に勝利点計算を追加
 
 ---
 
-### **Phase 3: ミニマムゲーム（β版）** ✅ 完了
+### 2. 変動建設コストシステム
 
-**目的**  
-最小限のルールで実際にゲームが進行する状態を実現  
-→ テストプレイで接続・ターン進行・アクション実行が確認できる
+**状態**: 🔴 未実装
 
-**実装内容**
+**仕様**:
 
-#### 3.1 ターン処理の完成
+- 条件を満たすと建設コストが削減される建物
+- カードの左上に緑の矢印マークが付く
+- 建物ごとに条件と削減幅が異なる
 
-```typescript
-// GameState.ts 拡張
-nextTurn(): void {
-  this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.size
-  if (this.currentPlayerIndex === 0) {
-    this.round++
-    if (this.round >= this.maxRounds) {
-      this.phase = 'finished'
-    }
-  }
-}
+**実装内容**:
 
-// server.ts で 'next_turn' アクション実装
-case 'next_turn':
-  if (room.getCurrentPlayer()?.id === playerId) {
-    room.nextTurn()
-    roomManager.broadcastToRoom(room.roomId, {
-      type: 'turn_changed',
-      payload: {
-        currentPlayer: room.getCurrentPlayer(),
-        round: room.round,
-        gameState: room.toJSON()
-      },
-      timestamp: Date.now()
-    })
-  }
-  break
-```
-
-#### 3.2 簡易アクション実装（3-5個）
-
-**アクション A: カード引く（draw_card）**
-
-```typescript
-case 'draw_card':
-  if (room.getCurrentPlayer()?.id === playerId) {
-    const player = room.players.get(playerId)!
-    const drawn = room.drawCards(1)
-    player.hand.push(...drawn)
-
-    // プレイヤーに個別通知
-    roomManager.sendToPlayer(room.roomId, playerId, {
-      type: 'hand_updated',
-      payload: { hand: player.hand },
-      timestamp: Date.now()
-    })
-
-    // 全員に状態通知
-    roomManager.broadcastToRoom(room.roomId, {
-      type: 'game_state_updated',
-      payload: { gameState: room.toJSON() },
-      timestamp: Date.now()
-    })
-  }
-  break
-```
-
-**アクション B: コイン獲得（gain_coins）**
-
-```typescript
-case 'gain_coins':
-  const player = room.players.get(playerId)!
-  player.coins += 5  // 固定値で最初はOK
-  roomManager.broadcastToRoom(room.roomId, {
-    type: 'resource_updated',
-    payload: {
-      playerId,
-      coins: player.coins,
-      gameState: room.toJSON()
-    },
-    timestamp: Date.now()
-  })
-  break
-```
-
-**アクション C: カード建設（build_card）**
-
-```typescript
-// data.cardId をプレイヤーの手札から buildings に移す
-case 'build_card':
-  const { cardId } = data as { cardId: string }
-  const player = room.players.get(playerId)!
-  const cardIndex = player.hand.findIndex(c => c.id === cardId)
-  if (cardIndex >= 0) {
-    const card = player.hand.splice(cardIndex, 1)[0]
-    player.buildings.push(card)
-    player.coins -= card.cost
-
-    roomManager.sendToPlayer(room.roomId, playerId, {
-      type: 'hand_updated',
-      payload: { hand: player.hand },
-      timestamp: Date.now()
-    })
-
-    roomManager.broadcastToRoom(room.roomId, {
-      type: 'building_built',
-      payload: {
-        playerId,
-        card,
-        gameState: room.toJSON()
-      },
-      timestamp: Date.now()
-    })
-  }
-  break
-```
-
-#### 3.3 クライアント側の実装（React）
-
-**新ファイル: `src/components/GameRoom.tsx`**
-
-```typescript
-'use client'
-
-import { useEffect, useState } from 'react'
-
-interface Player {
-  id: string
-  name: string
-  coins: number
-  hand: Card[]
-  buildings: Card[]
-}
-
-export default function GameRoom({ roomId }: { roomId: string }) {
-  const [ws, setWs] = useState<WebSocket | null>(null)
-  const [players, setPlayers] = useState<Player[]>([])
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
-  const [gameLog, setGameLog] = useState<string[]>([])
-
-  useEffect(() => {
-    const playerId = `player_${Math.random().toString(36).substr(2, 9)}`
-    const playerName = `Player_${Math.random().toString(36).substr(2, 5)}`
-
-    const websocket = new WebSocket(
-      `ws://localhost:3001/?roomId=${roomId}&playerId=${playerId}&playerName=${playerName}`
-    )
-
-    websocket.onopen = () => {
-      addLog(`✓ Connected as ${playerName}`)
-      setWs(websocket)
-    }
-
-    websocket.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-
-      switch (message.type) {
-        case 'ping':
-          websocket.send(JSON.stringify({
-            type: 'pong',
-            payload: {},
-            timestamp: Date.now()
-          }))
-          break
-
-        case 'player_joined':
-          addLog(`👤 ${message.payload.playerName} joined`)
-          setPlayers(message.payload.players)
-          break
-
-        case 'player_ready':
-          setPlayers(message.payload.players)
-          break
-
-        case 'game_started':
-          addLog('🎮 Game started!')
-          setCurrentPlayer(message.payload.currentPlayer)
-          break
-
-        case 'turn_changed':
-          addLog(`🔄 Turn: ${message.payload.currentPlayer.name}`)
-          setCurrentPlayer(message.payload.currentPlayer)
-          break
-
-        case 'game_state_updated':
-          // 状態更新
-          break
-      }
-    }
-
-    return () => {
-      websocket.close()
-    }
-  }, [roomId])
-
-  const addLog = (message: string) => {
-    setGameLog(prev => [
-      ...prev,
-      `[${new Date().toLocaleTimeString()}] ${message}`
-    ])
-  }
-
-  const handleReady = () => {
-    if (ws) {
-      ws.send(JSON.stringify({
-        type: 'ready',
-        payload: { playerId: 'current_player_id' },
-        timestamp: Date.now()
-      }))
-    }
-  }
-
-  const handleDrawCard = () => {
-    if (ws) {
-      ws.send(JSON.stringify({
-        type: 'action',
-        payload: {
-          playerId: 'current_player_id',
-          actionType: 'draw_card',
-          data: {}
-        },
-        timestamp: Date.now()
-      }))
-    }
-  }
-
-  return (
-    <div style={{ padding: '20px' }}>
-      <h1>Room: {roomId}</h1>
-
-      <div style={{ marginBottom: '20px' }}>
-        <h2>Players</h2>
-        <ul>
-          {players.map(p => (
-            <li key={p.id}>
-              {p.name} - Coins: {p.coins}, Hand: {p.hand.length}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <h2>Actions</h2>
-        <button onClick={handleReady}>Ready</button>
-        <button onClick={handleDrawCard}>Draw Card</button>
-      </div>
-
-      <div style={{
-        marginBottom: '20px',
-        border: '1px solid #ccc',
-        padding: '10px',
-        maxHeight: '200px',
-        overflow: 'auto'
-      }}>
-        <h2>Game Log</h2>
-        {gameLog.map((log, i) => (
-          <div key={i} style={{ fontSize: '12px' }}>{log}</div>
-        ))}
-      </div>
-    </div>
-  )
-}
-```
-
-**新ファイル: `src/app/room/[roomId]/page.tsx`**
-
-```typescript
-import GameRoom from '@/components/GameRoom'
-
-export default function RoomPage({ params }: { params: { roomId: string } }) {
-  return <GameRoom roomId={params.roomId} />
-}
-```
-
-#### 3.4 テスト計画
-
-```bash
-# ターミナル 1: WebSocket サーバー起動
-npm run dev:ws
-
-# ターミナル 2: Next.js UI 起動
-npm run dev
-
-# ブラウザで複数タブを開く
-# http://localhost:3000/room/TEST01
-
-# テストシナリオ:
-# 1. Tab 1, Tab 2 で接続
-# 2. Tab 1, Tab 2 が表示される
-# 3. 両方が "Ready" をクリック
-# 4. ゲーム開始
-# 5. ターンが回る
-# 6. "Draw Card" でカード引き
-```
-
-**完了条件**
-
-- [x] 複数プレイヤーが接続可能
-- [x] ゲーム開始可能（全員 ready）
-- [x] ターン進行可能
-- [x] アクション実行可能
-- [x] リアルタイム状態同期可能
+- `Card` 型に `costReduction?: { condition: string, amount: number }` を追加
+- 建設時に条件をチェックしてコストを計算
+- UI で緑矢印を表示
 
 ---
 
-### **Phase 4: 正式ルール実装** 📅 その次
+### 3. 初期手札3枚配布
 
-**目的**  
-完全なゲームルール実装
+**状態**: 🔴 未実装
 
-**実装内容**
+**仕様**:
 
-- [ ] 全カード効果の実装（50+ カード）
-- [ ] リソース管理システム
-- [ ] 建設チェーン（カード組み合わせボーナス）
-- [ ] ラウンド処理（朝昼夜の処理）
-- [ ] 最終得点計算
+- ゲーム開始時に各プレイヤーに建物カード3枚を配る
 
----
+**実装内容**:
 
-### **Phase 5: UI/UX 改善** 📅 その次
-
-**目的**  
-プロフェッショナルなゲーム画面実装
-
-**実装内容**
-
-- [ ] ゲーム盤面デザイン
-- [ ] カード画像表示
-- [ ] ドラッグ&ドロップ
-- [ ] アニメーション
-- [ ] リスポンシブ対応
+- `GameState.initializeGame()` または `dealInitialCards()` で3枚配布
+- 現在は手札配布なしなので追加が必要
 
 ---
 
-### **Phase 6: 負荷・運用改善** 📅 その次
+### 4. 手札上限5枚制限
 
-**目的**  
-本番環境対応
+**状態**: 🔴 未実装
 
-**実装内容**
+**仕様**:
 
-- [ ] メモリ最適化
-- [ ] キャッシュ戦略
-- [ ] ロギング・監視
-- [ ] DB 導入（Redis/Supabase）への移行パス
+- ラウンド終了時に手札6枚以上のプレイヤーは5枚になるように選んで捨てる
+- スタートプレイヤーから順に実施
+
+**実装内容**:
+
+- `GameState.endRound()` に手札チェック処理を追加
+- クライアント側で捨てるカードを選択する UI を実装
+- WebSocket で `discard_excess_cards` アクションを追加
 
 ---
 
-## 🔧 Phase 3 の実装手順（ステップバイステップ）
+### 5. 未払い賃金システム
 
-### ステップ 1: GameState にアクションメソッドを追加
+**状態**: 🔴 未実装
 
-**ファイル**: `src/lib/game/GameState.ts`
+**仕様**:
 
-```typescript
-// メソッドを追加
-drawCard(playerId: string): Card[] {
-  const player = this.players.get(playerId)
-  if (!player) return []
-  const drawn = this.drawCards(1)
-  player.hand.push(...drawn)
-  return drawn
-}
+- 賃金支払い不足時、不足額1ドルにつき未払い賃金カード1枚を取得
+- ゲーム終了時に1枚につき-3点
 
-gainCoins(playerId: string, amount: number): number {
-  const player = this.players.get(playerId)
-  if (!player) return 0
-  player.coins += amount
-  return player.coins
-}
+**実装内容**:
 
-buildBuilding(playerId: string, cardId: string): boolean {
-  const player = this.players.get(playerId)
-  if (!player) return false
+- `Player` 型に `unpaidWages: number` を追加 ✅ 済み (unpaidDebt として存在)
+- `GameState.endRound()` で賃金支払い不足時の処理を実装
+- ゲーム終了時スコア計算に `-unpaidWages * 3` を追加
 
-  const cardIndex = player.hand.findIndex(c => c.id === cardId)
-  if (cardIndex < 0) return false
+---
 
-  const card = player.hand[cardIndex]
-  if (player.coins < card.cost) return false
+### 6. 建物売却処理の修正
 
-  player.hand.splice(cardIndex, 1)
-  player.buildings.push(card)
-  player.coins -= card.cost
+**状態**: ⚠️ 部分実装
 
-  return true
-}
+**仕様**:
+
+- 賃金不足時のみ売却可能（お金が足りている時は売却不可）
+- 売却額は資産価値と同額をサプライから取得
+- 売却した建物は公共職場に移動し、次ラウンドから全員が使用可能
+
+**実装内容**:
+
+- `GameState.endRound()` の賃金支払い処理を修正
+- 売却時に `this.supply` から資産価値を取得
+- 売却した建物を `this.publicCards` に追加
+
+---
+
+### 7. ゲーム終了時スコア計算
+
+**状態**: 🔴 未実装
+
+**仕様**:
+
+```
+スコア = 建物資産価値
+       + 終了時ボーナス（建物の「終了時」効果）
+       + 所持金（$1 = 1点）
+       + 勝利点トークン（3枚ごとに10点、端数1枚1点）
+       - 未払い賃金（1枚3点）
 ```
 
-### ステップ 2: server.ts の handleAction にアクションを追加
+**同点時の処理**:
 
-**ファイル**: `server.ts`
+1. スタートプレイヤーが勝者
+2. いなければ手番順がスタートプレイヤーに近い方が勝者
 
-```typescript
-case 'draw_card': {
-  const drawn = room.drawCard(playerId)
+**実装内容**:
 
-  roomManager.sendToPlayer(room.roomId, playerId, {
-    type: 'hand_updated',
-    payload: { hand: room.players.get(playerId)?.hand },
-    timestamp: Date.now()
-  })
-
-  roomManager.broadcastToRoom(room.roomId, {
-    type: 'action_executed',
-    payload: {
-      playerId,
-      action: 'draw_card',
-      cardCount: drawn.length,
-      gameState: room.toJSON()
-    },
-    timestamp: Date.now()
-  })
-  break
-}
-```
-
-### ステップ 3: クライアント React コンポーネント実装
-
-**ファイル**: `src/components/GameRoom.tsx`
-
-完全実装（上記参照）
-
-### ステップ 4: テスト実行
-
-```bash
-npm run dev:all
-# ブラウザで複数タブから接続してテスト
-```
+- `GameState.calculateFinalScores()` メソッドを実装
+- 各要素のスコアを計算して返す
+- 同点処理を実装
 
 ---
 
-## 📈 推定時間と難度
+### 8. 研修中労働者の正しい実装
 
-| フェーズ | 予想時間   | 難度       | 状態    |
-| -------- | ---------- | ---------- | ------- |
-| Phase 1  | 2-3h       | ⭐⭐       | ✅ 完了 |
-| Phase 2  | 1-2h       | ⭐⭐       | ✅ 完了 |
-| Phase 3  | 3-4h       | ⭐⭐⭐     | 🔄 次   |
-| Phase 4  | 6-8h       | ⭐⭐⭐⭐   | 📅 予定 |
-| Phase 5  | 5-8h       | ⭐⭐⭐⭐⭐ | 📅 予定 |
-| Phase 6  | 3-5h       | ⭐⭐⭐     | 📅 予定 |
-| **合計** | **20-30h** | -          | -       |
+**状態**: ⚠️ 部分実装
+
+**仕様**:
+
+- 新規雇用時は表を「研修中」の状態で配置
+- 研修中は賃金が発生するが仕事はできない（労働者として配置不可）
+- 次のラウンド開始時に裏返して正式な労働者になる
+
+**現在の問題**:
+
+- `trainingWorkers` はあるが、配置制限が未実装
+- ラウンド開始時の正式化処理が未実装
+
+**実装内容**:
+
+- `placeWorker()` で `player.workers` のみチェック（trainingWorkers は除外）
+- `endRound()` の賃金計算で `workers + trainingWorkers` を使用 ✅ 済み
+- ラウンド開始時またはラウンド終了後に `trainingWorkers` を `workers` に移動
 
 ---
 
-## 🚀 デプロイメント計画
+## UI 改善項目
 
-### ローカル開発環境（現在）
+### 9. ゲーム情報表示の拡充
 
-- Next.js: `:3000`
-- WebSocket: `:3001`
+**状態**: 🔴 未実装
 
-### 本番環境（Vercel）
+**画面表示項目**:
 
-Option 1: Socket.io 導入
-
-```bash
-npm install socket.io express
-npm install --save-dev @types/express
+```
+ラウンド 1 | 賃金: $2/人 | 家計: $X | サプライ: $X
 ```
 
-Option 2: 外部サーバーホスト
+**実装内容**:
 
-- WebSocket: Railway.app / Render.com
-- UI: Vercel
+- `GameRoom.tsx` で household と supply を表示
+- WebSocket で state 送信時に household と supply を含める
 
 ---
 
-## ✅ チェックリスト
+## 実装優先順位
 
-- [x] Phase 1 実装完了
-- [x] Phase 2 実装完了
-- [x] Phase 3 実装完了
-- [ ] Phase 4
-- [ ] Phase 5
-- [ ] Phase 6
+### Phase 1: コアシステム（必須）
+
+1. ✅ 家計・サプライシステム（実装済み）
+2. 初期手札3枚配布
+3. 研修中労働者の正しい実装
+4. 手札上限5枚制限
+5. 未払い賃金システム
+6. 建物売却処理の修正
+
+### Phase 2: 得点システム
+
+7. 勝利点トークンシステム
+8. ゲーム終了時スコア計算
+
+### Phase 3: 高度な機能
+
+9. 変動建設コストシステム
+10. UI 改善（家計・サプライ表示）
+
+---
+
+## 実装メモ
+
+### 家計の流れ
+
+1. **ゲーム開始**: household = 0
+2. **ラウンド終了**: 各プレイヤーが賃金を家計に支払う → household 増加
+3. **職場効果**: 露店・市場など使用時 → household から取得 → household 減少
+4. **建物売却**: サプライから取得（家計ではない）
+
+### 賃金支払いフロー
+
+```
+ラウンド終了
+↓
+労働者を手元に戻す
+↓
+賃金計算: (workers + trainingWorkers) × 現在ラウンドの賃金
+↓
+所持金 >= 賃金?
+  YES → 家計に支払い
+  NO  → 建物売却を繰り返す
+    ↓
+    まだ足りない?
+      YES → 未払い賃金カード取得
+      NO  → 家計に支払い
+↓
+手札6枚以上? → 5枚まで捨てる
+↓
+次ラウンド開始
+```
+
+### 研修中労働者のフロー
+
+```
+学校で労働者雇用
+↓
+trainingWorkers++ （研修中として追加）
+↓
+このラウンド: 配置不可、賃金は発生
+↓
+ラウンド終了 → 次ラウンド開始
+↓
+trainingWorkers を workers に移動
+↓
+次ラウンド: 配置可能
+```

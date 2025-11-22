@@ -385,7 +385,16 @@ function handleAction(
       });
 
       // カード効果を実行
+      console.log(
+        `[Server] Executing workplace function: ${workplaceId} for player ${playerId}`
+      );
       const result = room.executeWorkplaceFunction(playerId, workplaceId, []);
+      console.log(`[Server] Workplace function result:`, result);
+      console.log(
+        `[Server] Player hand after effect:`,
+        player.hand.length,
+        "cards"
+      );
 
       if (result.success) {
         // 効果適用を通知
@@ -494,6 +503,35 @@ function handleAction(
           payload: {
             currentPlayer: room.getCurrentPlayer(),
             round: room.round,
+            gameState: room.toJSON(),
+          },
+          timestamp: Date.now(),
+        });
+      }
+      break;
+    }
+
+    case "discard_cards": {
+      const cardIds = (data as { cardIds?: string[] }).cardIds;
+      if (!cardIds || cardIds.length === 0) break;
+
+      const player = room.players.get(playerId);
+      if (player && room.discardCardsFromHand(playerId, cardIds)) {
+        // プレイヤーに個別に手札を通知
+        roomManager.sendToPlayer(room.roomId, playerId, {
+          type: "hand_updated",
+          payload: {
+            hand: player.hand,
+          },
+          timestamp: Date.now(),
+        });
+
+        // 全員に通知
+        roomManager.broadcastToRoom(room.roomId, {
+          type: "cards_discarded",
+          payload: {
+            playerId,
+            count: cardIds.length,
             gameState: room.toJSON(),
           },
           timestamp: Date.now(),

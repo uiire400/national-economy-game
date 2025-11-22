@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3002",
-    "dev:ws": "ts-node --project tsconfig.server.json server.ts",
+    "dev": "next dev -p 5002",
+    "dev:ws": "WS_PORT=5001 ts-node --project tsconfig.server.json server.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:ws\"",
     "build": "next build",
     "start": "next start",

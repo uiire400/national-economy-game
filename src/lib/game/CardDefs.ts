@@ -59,7 +59,6 @@ export const ALL_CARDS: Card[] = [
     assetValue: 2,
     category: "public",
     icon: "🏪",
-    allowMultipleWorkers: true,
   },
   {
     id: "market",
@@ -70,7 +69,6 @@ export const ALL_CARDS: Card[] = [
     assetValue: 5,
     category: "public",
     icon: "🛒",
-    allowMultipleWorkers: true,
   },
   {
     id: "high_school",
@@ -91,7 +89,6 @@ export const ALL_CARDS: Card[] = [
     assetValue: 8,
     category: "public",
     icon: "🏬",
-    allowMultipleWorkers: true,
   },
   {
     id: "university",
@@ -112,7 +109,6 @@ export const ALL_CARDS: Card[] = [
     assetValue: 12,
     category: "public",
     icon: "🏢",
-    allowMultipleWorkers: true,
   },
   {
     id: "vocational_school",
@@ -133,7 +129,6 @@ export const ALL_CARDS: Card[] = [
     assetValue: 15,
     category: "public",
     icon: "🎪",
-    allowMultipleWorkers: true,
   },
 
   // === プレイヤー建物カード（私有職場） ===

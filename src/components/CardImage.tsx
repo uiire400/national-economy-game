@@ -29,7 +29,7 @@ export default function CardImage({ card, style }: CardImageProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const imagePath = `/cards/${card.id}.png`;
+  const [imgSrc, setImgSrc] = useState(`/cards/${card.id}.png`);
   const emoji = cardEmojis[card.id] || "🎴";
   const effectDescription =
     CARD_EFFECT_DESCRIPTIONS[card.effect] || card.effect;
@@ -112,7 +112,7 @@ export default function CardImage({ card, style }: CardImageProps) {
       onMouseLeave={handleMouseLeave}
     >
       <img
-        src={imagePath}
+        src={imgSrc}
         alt={card.name}
         style={{
           width: "100%",
@@ -121,7 +121,14 @@ export default function CardImage({ card, style }: CardImageProps) {
           borderRadius: "4px",
           ...style,
         }}
-        onError={() => setImageError(true)}
+        onError={() => {
+          // png が無ければ svg を試す。それも無ければフォールバック表示へ
+          if (imgSrc.endsWith(".png")) {
+            setImgSrc(`/cards/${card.id}.svg`);
+          } else {
+            setImageError(true);
+          }
+        }}
       />
       {showTooltip && (
         <div

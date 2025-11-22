@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Player, Card, GameResults } from "@/lib/types";
 import { INITIAL_PUBLIC_CARDS, ROUND_CARDS } from "@/lib/game/CardDefs";
 import WagePaymentModal from "./WagePaymentModal";
@@ -433,6 +433,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
   const [maxWorkers] = useState<number>(5);
   const [unpaidDebt] = useState<number>(0);
   const [victoryTokens] = useState<number>(0);
+  const [household, setHousehold] = useState<number>(0);
   const [publicCards] = useState<Card[]>(INITIAL_PUBLIC_CARDS);
   const [currentRoundCard] = useState(ROUND_CARDS[0]);
 
@@ -459,6 +460,12 @@ export default function GameRoom({ roomId }: GameRoomProps) {
     Map<string, Map<string, number>>
   >(new Map());
 
+  // ダブルタップ検出用（タップ対象カードIDと時刻）
+  const lastTapRef = useRef<{ id?: string; time: number }>({
+    id: undefined,
+    time: 0,
+  });
+
   const addLog = (message: string) => {
     setGameLog((prev: string[]) => [...prev, message].slice(-15));
   };
@@ -475,7 +482,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
     setPlayerId(newPlayerId);
 
     const websocket = new WebSocket(
-      `ws://localhost:3001/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
+      `ws://localhost:5001/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
     );
 
     websocket.onopen = () => {
@@ -573,6 +580,8 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             gameState: {
               players: Player[];
               round: number;
+              household?: number;
+              supply?: number;
             };
           };
           setCurrentPlayer(payload.currentPlayer);
@@ -580,6 +589,11 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           // プレイヤー情報を更新（所持金を含む）
           if (payload.gameState && payload.gameState.players) {
             setPlayers(payload.gameState.players);
+
+            // 家計を更新
+            if (typeof payload.gameState.household === "number") {
+              setHousehold(payload.gameState.household);
+            }
 
             // 自分の所持金と建物情報を更新
             const myPlayerData = payload.gameState.players.find(
@@ -643,9 +657,21 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           const payload = message.payload as {
             currentPlayer: Player;
             round: number;
+            gameState?: {
+              household?: number;
+              supply?: number;
+            };
           };
           setCurrentPlayer(payload.currentPlayer);
           setRound(payload.round);
+
+          // 家計を更新
+          if (payload.gameState) {
+            if (typeof payload.gameState.household === "number") {
+              setHousehold(payload.gameState.household);
+            }
+          }
+
           addLog(`🔄 ターン変更`);
 
           // ガイドメッセージを更新
@@ -874,7 +900,12 @@ export default function GameRoom({ roomId }: GameRoomProps) {
   };
 
   const handlePlaceWorker = (workplaceId: string) => {
+    console.log(
+      `[GameRoom] handlePlaceWorker called: workplaceId=${workplaceId}, isMyTurn=${currentPlayer?.id === playerId}, ws.readyState=${ws?.readyState}`
+    );
+
     if (ws && ws.readyState === 1 && currentPlayer?.id === playerId) {
+      console.log(`[GameRoom] Sending place_worker action for ${workplaceId}`);
       ws.send(
         JSON.stringify({
           type: "action",
@@ -885,6 +916,10 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           },
           timestamp: Date.now(),
         })
+      );
+    } else {
+      console.warn(
+        `[GameRoom] Cannot place worker: ws=${!!ws}, readyState=${ws?.readyState}, isMyTurn=${currentPlayer?.id === playerId}`
       );
     }
   };
@@ -1223,7 +1258,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             {/* ラウンドカード表示 */}
             <div style={styles.roundCardDisplay}>
               ラウンド {currentRoundCard.round} | 賃金: $
-              {currentRoundCard.wagePerWorker}/人
+              {currentRoundCard.wagePerWorker}/人 | 家計: ${household}
             </div>
 
             <div style={styles.publicCardsGrid}>
@@ -1250,12 +1285,44 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                         opacity: totalPlacedWorkers > 0 ? 0.7 : 1,
                       }}
                       onDoubleClick={() => {
+                        console.log(
+                          `[GameRoom] Public card double-clicked: ${card.id}, isMyTurn=${isMyTurn}, myWorkers=${myWorkers}, totalPlacedWorkers=${totalPlacedWorkers}`
+                        );
                         if (
                           isMyTurn &&
                           myWorkers > 0 &&
                           totalPlacedWorkers === 0
                         ) {
                           handlePlaceWorker(card.id);
+                        } else {
+                          console.warn(
+                            `[GameRoom] Cannot place worker on public card`
+                          );
+                        }
+                      }}
+                      onTouchEnd={() => {
+                        const now = Date.now();
+                        if (
+                          lastTapRef.current.id === card.id &&
+                          now - lastTapRef.current.time < 400
+                        ) {
+                          console.log(
+                            `[GameRoom] Public card double-tap detected (touch): ${card.id}`
+                          );
+                          if (
+                            isMyTurn &&
+                            myWorkers > 0 &&
+                            totalPlacedWorkers === 0
+                          ) {
+                            handlePlaceWorker(card.id);
+                          } else {
+                            console.warn(
+                              `[GameRoom] Cannot place worker on public card (touch)`
+                            );
+                          }
+                          lastTapRef.current = { id: undefined, time: 0 };
+                        } else {
+                          lastTapRef.current = { id: card.id, time: now };
                         }
                       }}
                     >
@@ -1413,12 +1480,44 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                           opacity: myPlacedWorkerCount > 0 ? 0.7 : 1,
                         }}
                         onDoubleClick={() => {
+                          console.log(
+                            `[GameRoom] Private card double-clicked: ${card.id}, isMyTurn=${isMyTurn}, myWorkers=${myWorkers}, myPlacedWorkerCount=${myPlacedWorkerCount}`
+                          );
                           if (
                             isMyTurn &&
                             myWorkers > 0 &&
                             myPlacedWorkerCount === 0
                           ) {
                             handlePlaceWorker(card.id);
+                          } else {
+                            console.warn(
+                              `[GameRoom] Cannot place worker on private card`
+                            );
+                          }
+                        }}
+                        onTouchEnd={() => {
+                          const now = Date.now();
+                          if (
+                            lastTapRef.current.id === card.id &&
+                            now - lastTapRef.current.time < 400
+                          ) {
+                            console.log(
+                              `[GameRoom] Private card double-tap detected (touch): ${card.id}`
+                            );
+                            if (
+                              isMyTurn &&
+                              myWorkers > 0 &&
+                              myPlacedWorkerCount === 0
+                            ) {
+                              handlePlaceWorker(card.id);
+                            } else {
+                              console.warn(
+                                `[GameRoom] Cannot place worker on private card (touch)`
+                              );
+                            }
+                            lastTapRef.current = { id: undefined, time: 0 };
+                          } else {
+                            lastTapRef.current = { id: card.id, time: now };
                           }
                         }}
                       >

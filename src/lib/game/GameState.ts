@@ -384,6 +384,8 @@ export class GameState {
       phase: this.phase,
       deckCount: this.deck.length,
       discardCount: this.discard.length,
+      household: this.household,
+      supply: this.supply,
     };
   }
 
@@ -472,8 +474,18 @@ export class GameState {
       switch (effect) {
         // === 公共職場 ===
         case "draw_card_1": {
+          console.log(
+            `[GameState] draw_card_1: Before draw, hand size = ${player.hand.length}`
+          );
           const drawn = this.drawCards(1);
+          console.log(
+            `[GameState] draw_card_1: Drew ${drawn.length} cards:`,
+            drawn.map((c) => c.name)
+          );
           player.hand.push(...drawn);
+          console.log(
+            `[GameState] draw_card_1: After push, hand size = ${player.hand.length}`
+          );
           return { success: true, message: `建物カード1枚引きました` };
         }
 
@@ -740,9 +752,9 @@ export class GameState {
         }
 
         case "gain_goods_2or3": {
-          const hasGoods = player.hand.length > 0;
+          const hasGoods = player.hand.length > 0; // 簡易版：手札があるかチェック
           const drawCount = hasGoods ? 3 : 2;
-          const drawn = this.drawCards(drawCount);
+          const drawn = this.drawGoodsCards(drawCount); // 消費財カードを引く
           player.hand.push(...drawn);
           return { success: true, message: `消費財${drawCount}枚引きました` };
         }
@@ -761,7 +773,31 @@ export class GameState {
   }
 
   /**
-   * カードを捨てる
+   * カードを捨てる（手札上限処理用）
+   */
+  discardCardsFromHand(playerId: string, cardIds: string[]): boolean {
+    const player = this.players.get(playerId);
+    if (!player) return false;
+
+    cardIds.forEach((id) => {
+      const index = player.hand.findIndex((c) => c.id === id);
+      if (index >= 0) {
+        const card = player.hand.splice(index, 1)[0];
+        if (card.cardType === "goods") {
+          // 消費財は消費財の山に戻す
+          this.consumableDiscard.push(card);
+        } else {
+          // 建物は建物の捨て札に
+          this.discard.push(card);
+        }
+      }
+    });
+
+    return true;
+  }
+
+  /**
+   * カードを捨てる（内部用）
    */
   private discardCards(player: Player, cardIds: string[]): void {
     cardIds.forEach((id) => {
@@ -774,6 +810,85 @@ export class GameState {
   }
 
   /**
+   * 職場の効果を発揮できるかチェック
+   * @param playerId プレイヤーID
+   * @param workplace 職場カード
+   * @returns 効果を発揮できるか
+   */
+  private canActivateWorkplace(playerId: string, workplace: Card): boolean {
+    const player = this.players.get(playerId);
+    if (!player) return false;
+
+    const effect = workplace.effect;
+    if (!effect) return true; // 効果がない場合は配置可能
+
+    switch (effect) {
+      // === 家計から取得系 ===
+      case "gain_coins_6":
+      case "gain_coins_6_multi":
+        // 家計に$6以上必要 & カード1枚を捨てる必要がある
+        return this.household >= 6 && player.hand.length >= 1;
+
+      case "gain_coins_12":
+        // 家計に$12以上必要 & カード2枚を捨てる必要がある
+        return this.household >= 12 && player.hand.length >= 2;
+
+      case "gain_coins_18":
+        // 家計に$18以上必要 & カード3枚を捨てる必要がある
+        return this.household >= 18 && player.hand.length >= 3;
+
+      case "gain_coins_24":
+        // 家計に$24以上必要 & カード4枚を捨てる必要がある
+        return this.household >= 24 && player.hand.length >= 4;
+
+      case "gain_coins_30":
+        // 家計に$30以上必要 & カード5枚を捨てる必要がある
+        return this.household >= 30 && player.hand.length >= 5;
+
+      // === 労働者雇用系 ===
+      case "hire_worker_training":
+      case "hire_worker_instant":
+        // 労働者が最大でないこと
+        return player.workers + player.trainingWorkers < 5;
+
+      // === カード捨てが必要系 ===
+      case "discard_1_draw_2":
+        // カード1枚を捨てる必要がある
+        return player.hand.length >= 1;
+
+      case "discard_2_draw_4":
+        // カード2枚を捨てる必要がある
+        return player.hand.length >= 2;
+
+      // === 建物建設系 ===
+      case "build_card":
+      case "build_cost_-1":
+      case "build_cost_-2":
+      case "build_cost_-3":
+        // 手札に建物カードがあること
+        return player.hand.some((c) => c.cardType === "building");
+
+      // === その他、常に使用可能 ===
+      case "draw_card_1":
+      case "draw_card_2":
+      case "gain_coins_2":
+      case "gain_coins_3":
+      case "gain_goods_2":
+      case "gain_goods_3":
+      case "gain_goods_2or3":
+      case "gain_victory_token":
+        return true;
+
+      default:
+        // 未知の効果は配置可能とする
+        console.warn(
+          `[GameState] Unknown effect for activation check: ${effect}`
+        );
+        return true;
+    }
+  }
+
+  /**
    * ワーカーを職場に配置
    * @param playerId プレイヤーID
    * @param workplaceId 職場ID
@@ -783,14 +898,29 @@ export class GameState {
     const player = this.players.get(playerId);
     if (!player || player.workers <= 0) return false;
 
+    // 職場カードを取得してallowMultipleWorkersをチェック
+    const workplace = this.findWorkplaceCard(workplaceId);
+    if (!workplace) {
+      console.warn(`[GameState] Workplace ${workplaceId} not found`);
+      return false;
+    }
+
+    // 効果を発揮できるかチェック
+    if (!this.canActivateWorkplace(playerId, workplace)) {
+      console.warn(
+        `[GameState] Cannot activate workplace ${workplace.name} (${workplaceId}): conditions not met`
+      );
+      return false;
+    }
+
     // 既にこのカードに労働者が配置されているかチェック（全プレイヤー）
     let totalPlacedOnCard = 0;
     this.placedWorkers.forEach((workplaceMap) => {
       totalPlacedOnCard += workplaceMap.get(workplaceId) || 0;
     });
 
-    // 1カードに1コマまで
-    if (totalPlacedOnCard > 0) {
+    // 1カードに1コマまで（ただし、allowMultipleWorkers=trueの場合は複数配置可能）
+    if (!workplace.allowMultipleWorkers && totalPlacedOnCard > 0) {
       console.warn(`[GameState] Worker already placed on ${workplaceId}`);
       return false;
     }
@@ -804,6 +934,29 @@ export class GameState {
     player.workers--;
 
     return true;
+  }
+
+  /**
+   * 職場カードを検索（公共カード、建物、山札から）
+   * @param workplaceId 職場カードID
+   * @returns 職場カード、または見つからなければundefined
+   */
+  private findWorkplaceCard(workplaceId: string): Card | undefined {
+    // 公共カードから検索
+    const publicCard = this.publicCards.find((c) => c.id === workplaceId);
+    if (publicCard) return publicCard;
+
+    // 各プレイヤーの建物から検索
+    for (const player of this.players.values()) {
+      const building = player.buildings.find((c) => c.id === workplaceId);
+      if (building) return building;
+    }
+
+    // 山札から検索
+    const deckCard = this.deck.find((c) => c.id === workplaceId);
+    if (deckCard) return deckCard;
+
+    return undefined;
   }
 
   /**
@@ -827,13 +980,23 @@ export class GameState {
   endRound(): { success: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    // 1. 労働者を戻す & 賃金支払い
+    // 1. 労働者を戻す & 研修中の労働者を正式化 & 賃金支払い
     this.players.forEach((player) => {
-      const totalWorkers = player.workers + (player.trainingWorkers || 0);
-      player.workers = Math.min(
-        totalWorkers + this.getTotalPlacedWorkers(player.id),
-        GAME_CONFIG.MAX_WORKERS
-      );
+      // 配置された労働者を戻す
+      const placedWorkerCount = this.getTotalPlacedWorkers(player.id);
+      player.workers += placedWorkerCount;
+
+      // 研修中の労働者を正式な労働者に変換
+      if (player.trainingWorkers && player.trainingWorkers > 0) {
+        player.workers = Math.min(
+          player.workers + player.trainingWorkers,
+          GAME_CONFIG.MAX_WORKERS
+        );
+        player.trainingWorkers = 0;
+      }
+
+      // 最大労働者数を超えないようにする
+      player.workers = Math.min(player.workers, GAME_CONFIG.MAX_WORKERS);
 
       // 賃金計算
       const wage = player.workers * this.currentRoundCard.wagePerWorker;
@@ -849,6 +1012,20 @@ export class GameState {
     this.players.forEach((player) => {
       this.placedWorkers.set(player.id, new Map());
     });
+
+    // 2.5. 手札上限チェック（6枚以上なら5枚まで捨てる必要がある）
+    const playersNeedingDiscard: string[] = [];
+    this.players.forEach((player) => {
+      if (player.hand.length > 5) {
+        playersNeedingDiscard.push(player.id);
+      }
+    });
+
+    // 手札上限超過プレイヤーがいる場合、フラグをセット
+    if (playersNeedingDiscard.length > 0) {
+      // クライアント側で処理させるため、エラーではなく情報として返す
+      errors.push(`手札上限超過: ${playersNeedingDiscard.join(", ")}`);
+    }
 
     // 3. 次のラウンドへ
     this.round++;
@@ -905,19 +1082,28 @@ export class GameState {
     // 所持金不足 → 建物売却が必要
     const deficit = wageAmount - player.coins;
     let sellValue = 0;
+    const soldBuildings: Card[] = [];
 
     // 自動売却処理（簡易版：最初の建物から売却）
     while (sellValue < deficit && player.buildings.length > 0) {
       const building = player.buildings.shift()!;
       const value = building.assetValue || 0;
       sellValue += value;
+      soldBuildings.push(building);
+
+      // 売却した建物は公共職場に移動
+      this.publicCards.push(building);
     }
 
+    // 売却額をサプライから取得
+    player.coins += sellValue;
+    this.supply -= sellValue;
+
     // 支払い可能額を計算
-    const availableFunds = player.coins + sellValue;
+    const availableFunds = player.coins;
     const paidAmount = Math.min(availableFunds, wageAmount);
 
-    player.coins = 0;
+    player.coins -= paidAmount;
     this.household += paidAmount;
 
     // 未払い賃金を記録
@@ -936,12 +1122,16 @@ export class GameState {
       success: true,
       paid: paidAmount,
       debt: 0,
-      message: "Payment successful with building sales",
+      message:
+        soldBuildings.length > 0
+          ? `Payment successful with ${soldBuildings.length} building(s) sold`
+          : "Payment successful",
     };
   }
 
   /**
-   * 建物売却処理
+   * 建物売却処理（手動売却用）
+   * 注意: 賃金支払い時の自動売却はpayWages()で処理される
    * @param playerId プレイヤーID
    * @param buildingId 建物ID
    * @returns 売却成功の可否
@@ -958,10 +1148,14 @@ export class GameState {
     const building = player.buildings[buildingIndex];
     const saleValue = building.assetValue || 0;
 
+    // 建物を削除して公共職場に移動
     player.buildings.splice(buildingIndex, 1);
-    player.coins += Math.min(saleValue, this.supply);
+    this.publicCards.push(building);
 
-    this.supply -= saleValue;
+    // サプライから売却額を取得
+    const actualValue = Math.min(saleValue, this.supply);
+    player.coins += actualValue;
+    this.supply -= actualValue;
 
     return true;
   }
