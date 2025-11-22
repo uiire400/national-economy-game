@@ -76,6 +76,43 @@ export default function CardImage({ card, style }: CardImageProps) {
         >
           {card.name}
         </div>
+        {/* コストと資産価値を表示 */}
+        {card.cost > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "2px",
+              left: "2px",
+              backgroundColor: "#ffd700",
+              color: "#000",
+              fontSize: "9px",
+              fontWeight: "bold",
+              padding: "2px 4px",
+              borderRadius: "3px",
+              border: "1px solid #000",
+            }}
+          >
+            💰{card.cost}
+          </div>
+        )}
+        {card.assetValue !== undefined && card.assetValue > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "2px",
+              right: "2px",
+              backgroundColor: "#4169e1",
+              color: "#fff",
+              fontSize: "9px",
+              fontWeight: "bold",
+              padding: "2px 4px",
+              borderRadius: "3px",
+              border: "1px solid #000",
+            }}
+          >
+            🏆{card.assetValue}
+          </div>
+        )}
         {showTooltip && (
           <div
             style={{
@@ -123,6 +160,43 @@ export default function CardImage({ card, style }: CardImageProps) {
         }}
         onError={() => setImageError(true)}
       />
+      {/* コストと資産価値を表示 */}
+      {card.cost > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: "2px",
+            left: "2px",
+            backgroundColor: "#ffd700",
+            color: "#000",
+            fontSize: "9px",
+            fontWeight: "bold",
+            padding: "2px 4px",
+            borderRadius: "3px",
+            border: "1px solid #000",
+          }}
+        >
+          💰{card.cost}
+        </div>
+      )}
+      {card.assetValue !== undefined && card.assetValue > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: "2px",
+            right: "2px",
+            backgroundColor: "#4169e1",
+            color: "#fff",
+            fontSize: "9px",
+            fontWeight: "bold",
+            padding: "2px 4px",
+            borderRadius: "3px",
+            border: "1px solid #000",
+          }}
+        >
+          🏆{card.assetValue}
+        </div>
+      )}
       {showTooltip && (
         <div
           style={{

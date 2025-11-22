@@ -30,32 +30,32 @@ const styles = {
   statusBar: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "6px",
-    marginBottom: "8px",
+    gap: "4px",
+    marginBottom: "4px",
     backgroundColor: "#fff",
-    padding: "8px",
-    borderRadius: "6px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+    padding: "4px",
+    borderRadius: "4px",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
   },
 
   statusBarSecond: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "6px",
-    marginBottom: "12px",
+    gap: "4px",
+    marginBottom: "6px",
     backgroundColor: "#fff",
-    padding: "8px",
-    borderRadius: "6px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+    padding: "4px",
+    borderRadius: "4px",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
   },
 
   statusBox: {
-    padding: "8px",
-    borderRadius: "4px",
+    padding: "4px",
+    borderRadius: "3px",
     textAlign: "center" as const,
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: "bold",
-    border: "2px solid #333",
+    border: "1px solid #333",
   },
 
   statusBoxRound: {
@@ -89,43 +89,43 @@ const styles = {
   },
 
   statusLabel: {
-    fontSize: "10px",
+    fontSize: "9px",
     opacity: 0.9,
   },
 
   statusValue: {
-    fontSize: "16px",
-    marginTop: "2px",
+    fontSize: "13px",
+    marginTop: "1px",
   },
 
   // 共有カードエリア (テーブル中央)
   publicCardsSection: {
     backgroundColor: "#fff",
-    padding: "12px",
-    borderRadius: "8px",
-    marginBottom: "12px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-    border: "3px solid #8b4513",
+    padding: "8px",
+    borderRadius: "6px",
+    marginBottom: "8px",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+    border: "2px solid #8b4513",
   },
 
   publicCardsTitle: {
-    fontSize: "14px",
+    fontSize: "12px",
     fontWeight: "bold",
-    marginBottom: "8px",
+    marginBottom: "6px",
     color: "#333",
     textAlign: "center" as const,
   },
 
   roundCardDisplay: {
     backgroundColor: "#ffa500",
-    padding: "10px",
-    borderRadius: "6px",
-    marginBottom: "10px",
+    padding: "4px",
+    borderRadius: "4px",
+    marginBottom: "6px",
     textAlign: "center" as const,
     fontWeight: "bold",
     color: "#fff",
-    fontSize: "13px",
-    border: "2px solid #ff8c00",
+    fontSize: "11px",
+    border: "1px solid #ff8c00",
   },
 
   publicCardsGrid: {
@@ -135,7 +135,7 @@ const styles = {
   },
 
   cardSlot: {
-    aspectRatio: "1 / 1.4",
+    aspectRatio: "1 / 1",
     border: "2px solid #999",
     borderRadius: "4px",
     backgroundColor: "#f5f5f5",
@@ -195,38 +195,38 @@ const styles = {
   // プレイヤーエリア
   playerSection: {
     backgroundColor: "#fff",
-    padding: "12px",
-    borderRadius: "8px",
-    marginBottom: "12px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+    padding: "4px 6px",
+    borderRadius: "4px",
+    marginBottom: "6px",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
   },
 
   playerTitle: {
-    fontSize: "14px",
-    fontWeight: "bold",
-    marginBottom: "8px",
+    fontSize: "10px",
+    fontWeight: "600",
+    marginBottom: "4px",
     color: "#333",
   },
 
   playersList: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "8px",
-    marginBottom: "12px",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "4px",
+    marginBottom: "4px",
   },
 
   playerCard: {
-    padding: "10px",
+    padding: "4px 6px",
     backgroundColor: "#f9f9f9",
-    border: "2px solid #ddd",
-    borderRadius: "6px",
-    fontSize: "12px",
+    border: "1px solid #ddd",
+    borderRadius: "4px",
+    fontSize: "10px",
+    textAlign: "center" as const,
   },
 
   playerCardActive: {
     backgroundColor: "#fffacd",
     borderColor: "#ffd700",
-    boxShadow: "0 0 6px rgba(255,215,0,0.5)",
   },
 
   playerCardSelf: {
@@ -235,12 +235,12 @@ const styles = {
   },
 
   playerName: {
-    fontWeight: "bold",
-    marginBottom: "4px",
+    fontWeight: "600",
+    fontSize: "10px",
   },
 
   playerStats: {
-    fontSize: "11px",
+    fontSize: "9px",
     color: "#666",
   },
 
@@ -267,7 +267,7 @@ const styles = {
   },
 
   handCard: {
-    aspectRatio: "1 / 1.4",
+    aspectRatio: "1 / 1",
     border: "2px solid #3498db",
     borderRadius: "4px",
     backgroundColor: "#e8f4f8",
@@ -351,7 +351,7 @@ const styles = {
   },
 
   builtCard: {
-    aspectRatio: "1 / 1.4",
+    aspectRatio: "1 / 1",
     border: "2px solid #228b22",
     borderRadius: "4px",
     backgroundColor: "#f0fff0",
@@ -370,19 +370,19 @@ const styles = {
   // ガイドメッセージ
   guideMessageSection: {
     backgroundColor: "#fff3cd",
-    border: "3px solid #ffc107",
-    padding: "16px",
-    borderRadius: "8px",
-    marginBottom: "12px",
-    boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+    border: "2px solid #ffc107",
+    padding: "6px 8px",
+    borderRadius: "4px",
+    marginBottom: "6px",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
     textAlign: "center" as const,
   },
 
   guideMessageText: {
-    fontSize: "16px",
+    fontSize: "12px",
     fontWeight: "bold",
     color: "#856404",
-    lineHeight: "1.5",
+    lineHeight: "1.3",
   },
 
   // ゲームログ
@@ -475,7 +475,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
     setPlayerId(newPlayerId);
 
     const websocket = new WebSocket(
-      `ws://localhost:3001/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
+      `ws://localhost:4001/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
     );
 
     websocket.onopen = () => {
@@ -971,20 +971,17 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                 <div
                   key={p.id}
                   style={{
-                    padding: "12px",
+                    padding: "8px",
                     backgroundColor: p.id === playerId ? "#e8f5e9" : "#f5f5f5",
-                    border: `2px solid ${p.id === playerId ? "#4caf50" : "#ddd"}`,
+                    border: `1px solid ${p.id === playerId ? "#4caf50" : "#ddd"}`,
                     borderRadius: "6px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
-                  <div style={{ fontSize: "14px", fontWeight: "bold" }}>
+                  <div style={{ fontSize: "12px", fontWeight: "600" }}>
                     {p.name} {p.id === playerId && "（あなた）"}
-                  </div>
-                  <div style={{ fontSize: "12px" }}>
-                    {p.ready ? "✅ 準備完了" : "⏳ 待機中"}
                   </div>
                 </div>
               ))}
@@ -1260,9 +1257,6 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                       }}
                     >
                       <CardImage card={card} />
-                      <div style={styles.cardName}>
-                        {card.icon} {card.name}
-                      </div>
                       {/* 配置労働者カウント */}
                       {totalPlacedWorkers > 0 && (
                         <div
@@ -1329,9 +1323,6 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                 >
                   <div style={styles.playerName}>
                     {p.name} {p.id === currentPlayer?.id ? "👉" : ""}
-                  </div>
-                  <div style={styles.playerStats}>
-                    {p.ready ? "✅ 準備完了" : "⏳ 準備中"}
                   </div>
                 </div>
               ))}

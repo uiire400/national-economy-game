@@ -11,6 +11,8 @@ export interface Card {
   cardType?: "building" | "goods"; // カードタイプ（オプショナル）
   assetValue?: number; // 建物の資産価値（得点）
   category?: "public" | "private";
+  buildingTag?: "agriculture" | "industry" | "key"; // 建物タグ（【農業】【工業】【鍵】）
+  cannotSell?: boolean; // 売却不可フラグ（【鍵】建物）
   endGameBonus?: string; // 終了時ボーナスID
   icon?: string; // 絵文字
   allowMultipleWorkers?: boolean; // 複数労働者配置可能か（鉱山・店系カード）
