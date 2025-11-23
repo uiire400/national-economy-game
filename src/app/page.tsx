@@ -229,7 +229,7 @@ export default function Home() {
         <div style={styles.infoBox}>
           <strong>ℹ️ 重要</strong>
           <div style={{ marginTop: "6px", fontSize: "11px" }}>
-            WebSocket サーバーが <code>ws://localhost:5001</code>{" "}
+            WebSocket サーバーが <code>ws://localhost:3001</code>{" "}
             で実行中である必要があります。
           </div>
           <div style={{ marginTop: "4px", fontSize: "11px" }}>
