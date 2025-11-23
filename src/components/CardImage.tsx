@@ -166,19 +166,23 @@ export default function CardImage({ card, style }: CardImageProps) {
             style={{
               position: "absolute",
               top: "100%",
-              left: 0,
-              right: 0,
-              marginTop: "4px",
-              backgroundColor: "#333",
+              left: "50%",
+              transform: "translateX(-50%)",
+              marginTop: "6px",
+              backgroundColor: "rgba(0, 0, 0, 0.9)",
               color: "#fff",
-              padding: "8px",
-              borderRadius: "4px",
-              fontSize: "11px",
+              padding: "6px 10px",
+              borderRadius: "6px",
+              fontSize: "12px",
               zIndex: 1000,
-              whiteSpace: "nowrap",
+              minWidth: "120px",
+              maxWidth: "200px",
+              textAlign: "center",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              lineHeight: "1.4",
             }}
           >
-            💡 {effectDescription}
+            {effectDescription}
           </div>
         )}
       </div>
@@ -252,19 +256,23 @@ export default function CardImage({ card, style }: CardImageProps) {
           style={{
             position: "absolute",
             top: "100%",
-            left: 0,
-            right: 0,
-            marginTop: "4px",
-            backgroundColor: "#333",
+            left: "50%",
+            transform: "translateX(-50%)",
+            marginTop: "6px",
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
             color: "#fff",
-            padding: "8px",
-            borderRadius: "4px",
-            fontSize: "11px",
+            padding: "6px 10px",
+            borderRadius: "6px",
+            fontSize: "12px",
             zIndex: 1000,
-            whiteSpace: "nowrap",
+            minWidth: "120px",
+            maxWidth: "200px",
+            textAlign: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            lineHeight: "1.4",
           }}
         >
-          💡 {effectDescription}
+          {effectDescription}
         </div>
       )}
     </div>
