@@ -429,8 +429,8 @@ export default function GameRoom({ roomId }: GameRoomProps) {
   const [round, setRound] = useState<number>(1);
   const [wagePerWorker] = useState<number>(2);
   const [myCoins, setMyCoins] = useState<number>(5);
-  const [myWorkers, setMyWorkers] = useState<number>(2);
-  const [maxWorkers] = useState<number>(5);
+  const [myWorkers, setMyWorkers] = useState<number>(2); // 残り労働者数
+  const [totalWorkers, setTotalWorkers] = useState<number>(2); // 総労働者数
   const [unpaidDebt] = useState<number>(0);
   const [victoryTokens] = useState<number>(0);
   const [household, setHousehold] = useState<number>(0);
@@ -602,6 +602,9 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             if (myPlayerData) {
               setMyCoins(myPlayerData.coins);
               setMyBuildings(myPlayerData.buildings || []);
+              // 労働者数を設定
+              setMyWorkers(myPlayerData.workers || 2);
+              setTotalWorkers(myPlayerData.workers || 2);
             }
 
             // ラウンド情報も更新
@@ -660,6 +663,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             gameState?: {
               household?: number;
               supply?: number;
+              players?: Player[];
             };
           };
           setCurrentPlayer(payload.currentPlayer);
@@ -669,6 +673,19 @@ export default function GameRoom({ roomId }: GameRoomProps) {
           if (payload.gameState) {
             if (typeof payload.gameState.household === "number") {
               setHousehold(payload.gameState.household);
+            }
+
+            // プレイヤー情報を更新（労働者数を含む）
+            if (payload.gameState.players) {
+              const myPlayerData = payload.gameState.players.find(
+                (p: Player) => p.id === newPlayerId
+              );
+              if (myPlayerData) {
+                // ラウンド開始時に総労働者数をリセット
+                setTotalWorkers(myPlayerData.workers || 2);
+                // 残り労働者数も更新
+                setMyWorkers(myPlayerData.workers || 2);
+              }
             }
           }
 
@@ -1235,7 +1252,7 @@ export default function GameRoom({ roomId }: GameRoomProps) {
             <div style={{ ...styles.statusBox, ...styles.statusBoxWorker }}>
               <div style={styles.statusLabel}>労働者</div>
               <div style={styles.statusValue}>
-                {myWorkers}/{maxWorkers}
+                {myWorkers}/{totalWorkers}
               </div>
             </div>
             <div style={{ ...styles.statusBox, ...styles.statusBoxScore }}>
