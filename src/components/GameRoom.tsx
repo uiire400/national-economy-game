@@ -483,9 +483,8 @@ export default function GameRoom({ roomId }: GameRoomProps) {
 
     setPlayerId(newPlayerId);
 
-    const wsPort = process.env.NEXT_PUBLIC_WS_PORT;
     const websocket = new WebSocket(
-      `ws://localhost:${wsPort}/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
+      `ws://localhost:3001/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
     );
 
     websocket.onopen = () => {

@@ -9,7 +9,7 @@ import type {
   PongMessage,
 } from "./src/lib/types";
 
-const PORT = process.env.WS_PORT;
+const PORT = process.env.WS_PORT || 3001;
 const roomManager = RoomManager.getInstance();
 
 const server = createServer();
