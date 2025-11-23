@@ -11,7 +11,7 @@ export const ALL_CARDS: Card[] = [
     id: "quarry",
     name: "採石場",
     cost: 0,
-    effect: "draw_card_1",
+    effect: "draw_card_1_and_first_player",
     cardType: "building",
     assetValue: 0,
     category: "public",
@@ -21,7 +21,7 @@ export const ALL_CARDS: Card[] = [
     id: "mine",
     name: "鉱山",
     cost: 0,
-    effect: "gain_coins_6_multi",
+    effect: "draw_card_1",
     cardType: "building",
     assetValue: 0,
     category: "public",
@@ -1006,17 +1006,19 @@ export const CONSUMABLE_CARDS: Card[] = Array.from({ length: 30 }, (_, i) => ({
 export const CARD_EFFECT_DESCRIPTIONS: Record<string, string> = {
   // 公共職場
   draw_card_1: "建物カード1枚引く",
+  draw_card_1_and_first_player:
+    "建物カード1枚引く+次ラウンドのスタートプレイヤーになる",
   gain_coins_6_multi: "1枚捨て→$6（複数回可）",
   hire_worker_training: "労働者+1（研修中、次ラウンドから）",
   build_card: "手札から建物を建てる",
   gain_coins_6: "1枚捨て→$6（家計から）",
   gain_coins_12: "2枚捨て→$12（家計から）",
   hire_to_4_workers: "労働者を4人にする",
-  gain_coins_18: "2枚捨て→$18（家計から）",
+  gain_coins_18: "3枚捨て→$18（家計から）",
   hire_to_5_workers: "労働者を5人にする",
-  gain_coins_24: "3枚捨て→$24（家計から）",
-  hire_worker_instant: "労働者+1（即座に使える）",
-  gain_coins_30: "3枚捨て→$30（家計から）",
+  gain_coins_24: "4枚捨て→$24（家計から）",
+  hire_worker_instant: "労働者+1（そのラウンドから使える）",
+  gain_coins_30: "5枚捨て→$30（家計から）",
 
   // 私有職場
   discard_1_gain_8: "手札を一枚捨てて家計から$8取る",
@@ -1106,7 +1108,7 @@ export const ROUND_CARDS: RoundCard[] = [
   {
     round: 8,
     wagePerWorker: 5,
-    newPublicBuildingIds: ["vocational_school", "expo"],
+    newPublicBuildingIds: ["vocational_school"],
   },
-  { round: 9, wagePerWorker: 2, newPublicBuildingIds: [] },
+  { round: 9, wagePerWorker: 2, newPublicBuildingIds: ["expo"] },
 ];

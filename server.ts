@@ -9,7 +9,7 @@ import type {
   PongMessage,
 } from "./src/lib/types";
 
-const PORT = process.env.WS_PORT || 3001;
+const PORT = process.env.WS_PORT;
 const roomManager = RoomManager.getInstance();
 
 const server = createServer();
@@ -348,16 +348,28 @@ function handleAction(
 
     case "place_worker": {
       const workplaceId = (data as { workplaceId?: string }).workplaceId;
-      if (!workplaceId) break;
+      if (!workplaceId) {
+        console.warn(`[Server] place_worker: No workplaceId provided`);
+        break;
+      }
 
       const player = room.players.get(playerId);
-      if (!player) break;
+      if (!player) {
+        console.warn(`[Server] place_worker: Player ${playerId} not found`);
+        break;
+      }
+
+      console.log(
+        `[Server] Attempting to place worker: playerId=${playerId}, workplaceId=${workplaceId}, currentWorkers=${player.workers}`
+      );
 
       // 労働者を配置
       const placed = room.placeWorker(playerId, workplaceId);
+      console.log(`[Server] placeWorker returned: ${placed}`);
+
       if (!placed) {
         console.warn(
-          `[WebSocket] Failed to place worker: ${playerId} -> ${workplaceId}`
+          `[Server] Failed to place worker: ${playerId} -> ${workplaceId}`
         );
         break;
       }
