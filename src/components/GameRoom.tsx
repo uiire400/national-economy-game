@@ -218,7 +218,9 @@ const styles = {
   playerCard: {
     padding: "4px 6px",
     backgroundColor: "#f9f9f9",
-    border: "1px solid #ddd",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#ddd",
     borderRadius: "4px",
     fontSize: "10px",
     textAlign: "center" as const,
@@ -481,8 +483,9 @@ export default function GameRoom({ roomId }: GameRoomProps) {
 
     setPlayerId(newPlayerId);
 
+    const wsPort = process.env.NEXT_PUBLIC_WS_PORT;
     const websocket = new WebSocket(
-      `ws://localhost:3001/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
+      `ws://localhost:${wsPort}/?roomId=${roomId}&playerId=${newPlayerId}&playerName=${encodeURIComponent(urlNickname)}`
     );
 
     websocket.onopen = () => {
@@ -1287,6 +1290,16 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                   0
                 );
 
+                if (totalPlacedWorkers > 0) {
+                  console.log(
+                    `[GameRoom] Card ${card.id}: total=${totalPlacedWorkers}, my=${myPlacedWorkerCount}, placedWorkers=`,
+                    Array.from(placedWorkers.entries()).map(([pid, wm]) => [
+                      pid,
+                      Array.from(wm.entries()),
+                    ])
+                  );
+                }
+
                 return (
                   <div key={card.id} style={{ position: "relative" as const }}>
                     <div
@@ -1300,12 +1313,13 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                       }}
                       onDoubleClick={() => {
                         console.log(
-                          `[GameRoom] Public card double-clicked: ${card.id}, isMyTurn=${isMyTurn}, myWorkers=${myWorkers}, totalPlacedWorkers=${totalPlacedWorkers}`
+                          `[GameRoom] Public card double-clicked: ${card.id}, isMyTurn=${isMyTurn}, myWorkers=${myWorkers}, totalPlacedWorkers=${totalPlacedWorkers}, allowMultiple=${card.allowMultipleWorkers}`
                         );
                         if (
                           isMyTurn &&
                           myWorkers > 0 &&
-                          totalPlacedWorkers === 0
+                          (card.allowMultipleWorkers ||
+                            totalPlacedWorkers === 0)
                         ) {
                           handlePlaceWorker(card.id);
                         } else {
@@ -1326,7 +1340,8 @@ export default function GameRoom({ roomId }: GameRoomProps) {
                           if (
                             isMyTurn &&
                             myWorkers > 0 &&
-                            totalPlacedWorkers === 0
+                            (card.allowMultipleWorkers ||
+                              totalPlacedWorkers === 0)
                           ) {
                             handlePlaceWorker(card.id);
                           } else {

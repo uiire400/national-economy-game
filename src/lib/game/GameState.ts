@@ -489,6 +489,35 @@ export class GameState {
           return { success: true, message: `建物カード1枚引きました` };
         }
 
+        case "draw_card_1_and_first_player": {
+          console.log(
+            `[GameState] draw_card_1_and_first_player: Before draw, hand size = ${player.hand.length}`
+          );
+          const drawn = this.drawCards(1);
+          console.log(
+            `[GameState] draw_card_1_and_first_player: Drew ${drawn.length} cards:`,
+            drawn.map((c) => c.name)
+          );
+          player.hand.push(...drawn);
+          // 次ラウンドのスタートプレイヤーをこのプレイヤーにセット
+          // （現在のプレイヤーインデックスを見つけて設定）
+          const playerIds = Array.from(this.players.keys());
+          const playerIndex = playerIds.indexOf(playerId);
+          if (playerIndex !== -1) {
+            this.currentPlayerIndex = playerIndex;
+            console.log(
+              `[GameState] ${player.name} が次ラウンドのスタートプレイヤーになりました`
+            );
+          }
+          console.log(
+            `[GameState] draw_card_1_and_first_player: After push, hand size = ${player.hand.length}`
+          );
+          return {
+            success: true,
+            message: `建物カード1枚引きました（次ラウンドのスタートプレイヤーになります）`,
+          };
+        }
+
         case "gain_coins_6_multi": {
           if (discardedCardIds.length < 1) {
             return { success: false, message: "カード1枚を捨ててください" };
@@ -556,13 +585,13 @@ export class GameState {
         }
 
         case "gain_coins_18": {
-          if (discardedCardIds.length < 2) {
-            return { success: false, message: "カード2枚を捨ててください" };
+          if (discardedCardIds.length < 3) {
+            return { success: false, message: "カード3枚を捨ててください" };
           }
           if (this.household < 18) {
             return { success: false, message: "家計に$18以上必要です" };
           }
-          this.discardCards(player, discardedCardIds.slice(0, 2));
+          this.discardCards(player, discardedCardIds.slice(0, 3));
           const amount = Math.min(18, this.household);
           player.coins += amount;
           this.household -= amount;
@@ -578,13 +607,13 @@ export class GameState {
         }
 
         case "gain_coins_24": {
-          if (discardedCardIds.length < 3) {
-            return { success: false, message: "カード3枚を捨ててください" };
+          if (discardedCardIds.length < 4) {
+            return { success: false, message: "カード4枚を捨ててください" };
           }
           if (this.household < 24) {
             return { success: false, message: "家計に$24以上必要です" };
           }
-          this.discardCards(player, discardedCardIds.slice(0, 3));
+          this.discardCards(player, discardedCardIds.slice(0, 4));
           const amount = Math.min(24, this.household);
           player.coins += amount;
           this.household -= amount;
@@ -596,17 +625,20 @@ export class GameState {
             return { success: false, message: "労働者が最大です" };
           }
           player.workers++;
-          return { success: true, message: "労働者+1（即座に使える）" };
+          return {
+            success: true,
+            message: "労働者+1（そのラウンドから使える）",
+          };
         }
 
         case "gain_coins_30": {
-          if (discardedCardIds.length < 3) {
-            return { success: false, message: "カード3枚を捨ててください" };
+          if (discardedCardIds.length < 5) {
+            return { success: false, message: "カード5枚を捨ててください" };
           }
           if (this.household < 30) {
             return { success: false, message: "家計に$30以上必要です" };
           }
-          this.discardCards(player, discardedCardIds.slice(0, 3));
+          this.discardCards(player, discardedCardIds.slice(0, 5));
           const amount = Math.min(30, this.household);
           player.coins += amount;
           this.household -= amount;
@@ -817,17 +849,41 @@ export class GameState {
    */
   private canActivateWorkplace(playerId: string, workplace: Card): boolean {
     const player = this.players.get(playerId);
-    if (!player) return false;
+    if (!player) {
+      console.warn(
+        `[GameState.canActivateWorkplace] Player ${playerId} not found`
+      );
+      return false;
+    }
 
     const effect = workplace.effect;
-    if (!effect) return true; // 効果がない場合は配置可能
+    if (!effect) {
+      console.log(
+        `[GameState.canActivateWorkplace] No effect on ${workplace.name}, allowing placement`
+      );
+      return true; // 効果がない場合は配置可能
+    }
+
+    console.log(
+      `[GameState.canActivateWorkplace] Checking effect ${effect} on ${workplace.name} for player ${player.name}`
+    );
+    console.log(
+      `[GameState.canActivateWorkplace] Player state: hand=${player.hand.length}, workers=${player.workers}, household=${this.household}, deck=${this.deck.length}`
+    );
 
     switch (effect) {
       // === 家計から取得系 ===
       case "gain_coins_6":
-      case "gain_coins_6_multi":
+      case "gain_coins_6_multi": {
         // 家計に$6以上必要 & カード1枚を捨てる必要がある
-        return this.household >= 6 && player.hand.length >= 1;
+        const canGain6 = this.household >= 6 && player.hand.length >= 1;
+        if (!canGain6) {
+          console.warn(
+            `[GameState.canActivateWorkplace] Cannot use ${effect}: household=${this.household}, hand=${player.hand.length}`
+          );
+        }
+        return canGain6;
+      }
 
       case "gain_coins_12":
         // 家計に$12以上必要 & カード2枚を捨てる必要がある
@@ -870,6 +926,7 @@ export class GameState {
 
       // === その他、常に使用可能 ===
       case "draw_card_1":
+      case "draw_card_1_and_first_player":
       case "draw_card_2":
       case "gain_coins_2":
       case "gain_coins_3":

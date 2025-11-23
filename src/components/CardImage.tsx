@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Card } from "@/lib/types";
 import { CARD_EFFECT_DESCRIPTIONS } from "@/lib/game/CardDefs";
 
@@ -24,12 +24,16 @@ const cardEmojis: Record<string, string> = {
   scholar: "📚",
 };
 
+let _availableCardFiles: Set<string> | null = null;
+
 export default function CardImage({ card, style }: CardImageProps) {
   const [imageError, setImageError] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const [imgSrc, setImgSrc] = useState(`/cards/${card.id}.png`);
+  // imgSrc is null until we determine whether an asset exists. This avoids
+  // immediately setting a missing <img src> and causing console 404s.
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
   const emoji = cardEmojis[card.id] || "🎴";
   const effectDescription =
     CARD_EFFECT_DESCRIPTIONS[card.effect] || card.effect;
@@ -50,6 +54,50 @@ export default function CardImage({ card, style }: CardImageProps) {
     handleTouchEnd();
     setShowTooltip(false);
   };
+
+  // Load the manifest of available card files (cached globally) to prevent
+  // attempting to load images that don't exist and causing console 404s.
+  // The manifest is a simple array of filenames (e.g. ["carpenter.svg"]).
+  // It lives at /cards/index.json in the public folder.
+  useEffect(() => {
+    let mounted = true;
+
+    async function ensureManifestAndChoose() {
+      try {
+        if (!_availableCardFiles) {
+          const res = await fetch(`/cards/index.json`);
+          if (!res.ok) {
+            _availableCardFiles = new Set();
+          } else {
+            const list: string[] = await res.json();
+            _availableCardFiles = new Set(list || []);
+          }
+        }
+
+        if (!mounted) return;
+
+        const pngName = `${card.id}.png`;
+        const svgName = `${card.id}.svg`;
+        if (_availableCardFiles.has(pngName)) {
+          setImgSrc(`/cards/${pngName}`);
+        } else if (_availableCardFiles.has(svgName)) {
+          setImgSrc(`/cards/${svgName}`);
+        } else {
+          setImageError(true);
+        }
+      } catch (err) {
+        // On any error, fallback to emoji rendering and log for debugging
+        console.debug("CardImage: failed to load manifest", err);
+        setImageError(true);
+      }
+    }
+
+    ensureManifestAndChoose();
+
+    return () => {
+      mounted = false;
+    };
+  }, [card.id]);
 
   if (imageError) {
     // 画像が見つからない場合のフォールバック
@@ -149,7 +197,7 @@ export default function CardImage({ card, style }: CardImageProps) {
       onMouseLeave={handleMouseLeave}
     >
       <img
-        src={imgSrc}
+        src={imgSrc || undefined}
         alt={card.name}
         style={{
           width: "100%",
@@ -159,12 +207,7 @@ export default function CardImage({ card, style }: CardImageProps) {
           ...style,
         }}
         onError={() => {
-          // png が無ければ svg を試す。それも無ければフォールバック表示へ
-          if (imgSrc.endsWith(".png")) {
-            setImgSrc(`/cards/${card.id}.svg`);
-          } else {
-            setImageError(true);
-          }
+          setImageError(true);
         }}
       />
       {/* コストと資産価値を表示 */}
