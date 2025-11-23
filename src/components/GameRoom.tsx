@@ -56,6 +56,10 @@ const styles = {
     fontSize: "11px",
     fontWeight: "bold",
     border: "1px solid #333",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "4px",
   },
 
   statusBoxRound: {
@@ -95,7 +99,6 @@ const styles = {
 
   statusValue: {
     fontSize: "13px",
-    marginTop: "1px",
   },
 
   // 共有カードエリア (テーブル中央)
